@@ -76,6 +76,7 @@ max_x = 1.8
 min_y = -1
 max_y = 3
 benchmark = benchmark_rosenbrock
+
 number_of_particles = 20
 nx = int(np.sqrt(number_of_particles))
 ny = number_of_particles // nx
@@ -89,7 +90,7 @@ particles = np.array([[x, y] for x in particles_x for y in particles_y])
 # particles = np.random.rand(20, 2) * [max_x - min_x, max_y - min_y] + [min_x, min_y]
 
 ## Random init
-velocity = np.random.rand(20, 2)
+velocity = np.random.rand(number_of_particles, 2)
 score_x_y = [[benchmark(x, y), x, y] for x, y in particles]
 pbest = np.array(score_x_y)
 gbest = min(pbest, key=lambda x: x[0])
@@ -104,22 +105,29 @@ z = benchmark(x, y)
 
 fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
 ls = LightSource(270, 45)
+surf = ax.plot_surface(x, y, z, cmap=cm.jet, linewidth=0, antialiased=False)
 particle_history = [particles]
-for i in range(200):
+scatter = ax.scatter(
+    particles[:, 0],
+    particles[:, 1],
+    [benchmark(x, y) for x, y in particles],
+    c=[0 for _ in particles],
+    linewidths=10,
+    label="scatter",
+)
+
+epoch = 1
+while velocity.max() > 1e-2:
+    ax.set_title(f"rastrigin with particles - epoch:{epoch}")
     particles, velocity, pbest, gbest = update(
         particles, velocity, pbest, gbest, benchmark, 0.3, 0.8, 0.8
     )
     particle_history.append(particles)
-    print(particles[0])
-ax.scatter(
-    particles[:, 0],
-    particles[:, 1],
-    [benchmark(x, y) for x, y in particles],
-    c=[0 for x, y in particles],
-    linewidths=10,
-)
-surf = ax.plot_surface(x, y, z, cmap=cm.jet, linewidth=0, antialiased=False)
-ax.set_title("rastrigin with particles")
+    scatter.set_offsets([[_x, _y] for _x, _y in particles])
+    scatter.set_3d_properties([benchmark(x, y) for x, y in particles], "z")
+    epoch += 1
+    plt.draw()
+    plt.pause(0.5)
 plt.show()
 print(particle_history)
 print(gbest)
