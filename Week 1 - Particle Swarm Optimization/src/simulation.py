@@ -8,21 +8,20 @@ np.random.seed(42)
 N = 300
 
 
-def update(pos, vel, pbest, gbest, bench, a, b, c):
-    new_pos = pos + vel
+def update(pos, vel, p_best, g_best, bench, a, b, c):
     rng = np.random.default_rng(12345)
-    scores = np.array([bench(*p) for p in pos])
     for i, p in enumerate(pos):
         score = bench(*p)
-        if pbest[i][0] > score:
-            if gbest[0] > score:
-                gbest = score, *p
-            pbest[i] = score, *p
+        if p_best[i][0] > score:
+            if g_best[0] > score:
+                g_best = score, *p
+            p_best[i] = score, *p
     R = rng.random()
 
-    vel = a * vel + b * R * (pbest[:, 1:] - pos) + c * R * (gbest[1:] - pos)
+    vel = a * vel + b * R * (p_best[:, 1:] - pos) + c * R * (g_best[1:] - pos)
 
-    return new_pos, vel, pbest, gbest
+    new_pos = pos + vel
+    return new_pos, vel, p_best, g_best
 
 
 def benchmark_rosenbrock(x, y, a=1, b=100):
@@ -41,30 +40,6 @@ def benchmark_rastrigin(x, y, n=2, A=10):
     return _benchmark_rastrigin(x, n, A) + _benchmark_rastrigin(y, n, A)
 
 
-x = np.linspace(-1.8, 1.8, N)
-y = np.linspace(-1, 3, N)
-x, y = np.meshgrid(x, y)
-z = benchmark_rosenbrock(x, y)
-
-fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
-ls = LightSource(270, 45)
-surf = ax.plot_surface(x, y, z, cmap=cm.jet, linewidth=0, antialiased=False)
-ax.set_title("rosenbrock")
-plt.show()
-
-
-x = np.linspace(-5, 5, N)
-y = np.linspace(-5, 5, N)
-x, y = np.meshgrid(x, y)
-z = benchmark_rastrigin(x, y)
-
-fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
-ls = LightSource(270, 45)
-surf = ax.plot_surface(x, y, z, cmap=cm.jet, linewidth=0, antialiased=False)
-ax.set_title("rastrigin")
-plt.show()
-
-
 # min_x = -5.12
 # max_x = 5.12
 # min_y = -5.12
@@ -77,20 +52,22 @@ min_y = -1
 max_y = 3
 benchmark = benchmark_rosenbrock
 
-number_of_particles = 20
+number_of_particles = 30
 nx = int(np.sqrt(number_of_particles))
 ny = number_of_particles // nx
 
-# Systematic placement
+# Placement
+## Systematic placement
 particles_x = np.linspace(min_x, max_x, nx)
 particles_y = np.linspace(min_y, max_y, ny)
 particles = np.array([[x, y] for x in particles_x for y in particles_y])
 
 ## Random placement
-# particles = np.random.rand(20, 2) * [max_x - min_x, max_y - min_y] + [min_x, min_y]
+# particles = np.random.rand(number_of_particles, 2) * [max_x - min_x, max_y - min_y] + [min_x, min_y]
 
 ## Random init
 velocity = np.random.rand(number_of_particles, 2)
+
 score_x_y = [[benchmark(x, y), x, y] for x, y in particles]
 pbest = np.array(score_x_y)
 gbest = min(pbest, key=lambda x: x[0])
@@ -103,31 +80,75 @@ y = np.linspace(min_y, max_y, N)
 x, y = np.meshgrid(x, y)
 z = benchmark(x, y)
 
-fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
+# fig, ax1 = plt.subplots(subplot_kw=dict(projection="3d"))
+fig = plt.figure()
+ax1 = fig.add_subplot(1, 2, 1, projection="3d")
+ax2 = fig.add_subplot(
+    1,
+    2,
+    2,
+)
+# ax3 = fig.add_subplot(
+#     1,
+#     3,
+#     3,
+# )
+
 ls = LightSource(270, 45)
-surf = ax.plot_surface(x, y, z, cmap=cm.jet, linewidth=0, antialiased=False)
+surf = ax1.plot_surface(
+    x, y, z, cmap=cm.jet, edgecolor="black", linewidth=0.02, zorder=-1, alpha=0.1
+)
 particle_history = [particles]
-scatter = ax.scatter(
+g_history = [gbest[0]]
+p_history = [pbest[:, 0]]
+scatter = ax1.scatter(
     particles[:, 0],
     particles[:, 1],
     [benchmark(x, y) for x, y in particles],
     c=[0 for _ in particles],
-    linewidths=10,
+    linewidths=0,
     label="scatter",
 )
+plt.draw()
+plt.waitforbuttonpress()
+plt.waitforbuttonpress()
 
-epoch = 1
-while velocity.max() > 1e-2:
-    ax.set_title(f"rastrigin with particles - epoch:{epoch}")
+epoch = 0
+a = 0.8
+b = 1.2
+c = 0.8
+(points,) = ax2.plot([epoch], g_history)
+
+
+def speed_of(vel):
+    return [(x**2 + y**2) ** (1 / 2) for x, y in vel]
+
+
+while np.mean(speed_of(velocity)) > 1e-3:
+    # while velocity.max() > 1e-3:
+    epoch += 1
+    ax1.set_title(f"with particles - epoch:{epoch}")
+    ax2.set_xlim(0, epoch + 2)
+    # ax2.set_ylim(0, max(g_history[len(g_history)//4 :]) * 1.1)
+    ax2.set_ylim(0, max(g_history) * 1.1)
+
     particles, velocity, pbest, gbest = update(
-        particles, velocity, pbest, gbest, benchmark, 0.3, 0.8, 0.8
+        particles, velocity, pbest, gbest, benchmark, max(0.4, a), b, c
     )
+    a /= 1.1
+    # b /= 1.1
+    # c /= 1.1
+
     particle_history.append(particles)
     scatter.set_offsets([[_x, _y] for _x, _y in particles])
     scatter.set_3d_properties([benchmark(x, y) for x, y in particles], "z")
-    epoch += 1
+
+    g_history.append(gbest[0])
+    p_history.append(pbest[:, 0])
+    points.set_data([x for x in range(epoch + 1)], g_history)
+    # points2.set_data([[x for x in range(epoch + 1)] for _ in p_history[0]], p_history)
     plt.draw()
-    plt.pause(0.5)
+    plt.pause(0.01)
 plt.show()
-print(particle_history)
+print(particles)
 print(gbest)
