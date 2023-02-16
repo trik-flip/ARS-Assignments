@@ -12,7 +12,7 @@ BLACK = (0, 0, 0)
 
 
 (width, height) = (1920, 1080)
-STEP_SIZE = 0.001
+STEP_SIZE = 0.0001
 
 
 class Position:
@@ -310,7 +310,6 @@ def main(background):
             robby.speed.left += STEP_SIZE
         if key_event[pygame.K_s]:
             robby.speed.left -= STEP_SIZE
-
         robby._update_position()
         robby._draw(box.lines())
         box.draw(screen)
