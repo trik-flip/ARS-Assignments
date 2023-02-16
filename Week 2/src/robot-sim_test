@@ -9,6 +9,8 @@ BLUE = (0, 0, 255)
 GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 BLACK = (0, 0, 0)
+PINK = (248, 131, 121)
+CYAN = (224,255,255)
 
 
 (width, height) = (1920, 1080)
@@ -40,7 +42,7 @@ class Velocity:
 
 
 class Robot:
-    def __init__(self, screen, size=20, color=(80,) * 3) -> None:
+    def __init__(self, screen, size=20, color=CYAN) -> None:
         self.position = Position(1920 / 2, 1080 / 2)
         self.speed = Velocity()
         self.direction = 0
@@ -132,7 +134,18 @@ def main(background):
             robby.speed.left += STEP_SIZE
         if key_event[pygame.K_s]:
             robby.speed.left -= STEP_SIZE
+        if key_event[pygame.K_x]:
+            robby.speed.left = 0
+            robby.speed.right = 0
+        if key_event[pygame.K_t]:
+            robby.speed.left += STEP_SIZE
+            robby.speed.right += STEP_SIZE
+            
+        if key_event[pygame.K_g]:
+            robby.speed.left -= STEP_SIZE
+            robby.speed.right -= STEP_SIZE
         
+
         robby._clear(background)
         robby._update_position()
         robby._draw()
@@ -141,4 +154,4 @@ def main(background):
 
 
 if __name__ == "__main__":
-    main(background=RED)
+    main(background=PINK)
