@@ -56,6 +56,32 @@ class Line:
     def y_axis_intersect(self):
         return self.start.y - self.gradient() * self.start.x
 
+    def intersect_point(self, line):
+        if not isinstance(line, Line):
+            return None
+
+        lg = line.gradient()
+        sg = self.gradient()
+        ly = line.y_axis_intersect()
+        sy = self.y_axis_intersect()
+
+        if lg == float("inf") or abs(lg) > 1e15:
+            x = line.start.x
+            y = sy + x * sg
+            return x, y
+        if sg == float("inf") or abs(sg) > 1e15:
+            x = self.start.x
+            y = ly + x * lg
+            return x, y
+        if lg == sg:
+            if ly == sy:
+                return self.to_tuple()
+            return None
+
+        x = (ly - sy) / (sg - lg)
+        y = x * lg + ly
+        return x, y
+
 
 class Box:
     top: Line
@@ -91,11 +117,11 @@ class Sensor:
         self._direction = direction
         self.direction = direction
 
-    def does_intersect(self, line: Line):
+    def is_intersect(self, line: Line):
         if line.gradient() == self.gradient():
             return False
 
-        point = self.intersect(line)
+        point = self.intersect_point(line)
         if point is None:
             return False
 
@@ -124,21 +150,22 @@ class Sensor:
 
         return True
 
-    def intersect(self, line: Line):
+    def intersect_point(self, line: Line):
         l_g = line.gradient()
         s_g = self.gradient()
         if l_g == float("inf") or abs(l_g) > 1e15:
             x = line.start.x
-            y = self._y_axis_intersect() + x * self.gradient()
+            y = self._y_axis_intersect() + x * s_g
             return x, y
         if s_g == float("inf") or abs(s_g) > 1e15:
             x = self.position.x
-            y = line.y_axis_intersect() + x * line.gradient()
+            y = line.y_axis_intersect() + x * l_g
             return x, y
         if l_g == s_g:
             if line.y_axis_intersect() == self._y_axis_intersect():
                 return self.position.to_tuple()
             return None
+
         y1 = self._y_axis_intersect()
         x = (line.y_axis_intersect() - y1) / (s_g - l_g)
         y = self.gradient() * x + y1
@@ -214,10 +241,12 @@ class Robot:
         for sensor in self.sensors:
             t_x = cos(sensor.direction)
             t_y = sin(sensor.direction)
+
             x, y = None, None
+
             for line in lines:
-                if sensor.does_intersect(line):
-                    p = sensor.intersect(line)
+                if sensor.is_intersect(line):
+                    p = sensor.intersect_point(line)
                     if p is not None:
                         x, y = p
             if x is None:
@@ -235,8 +264,10 @@ class Robot:
         if (self.speed.left + self.speed.right) == 0:
             return
         if self.speed.is_straight():
-            self.position.x += self.speed.left * sin(self.direction)
-            self.position.y += self.speed.left * cos(self.direction)
+            self.position.x += self.speed.left * cos(self.direction)
+            self.position.y += self.speed.left * sin(self.direction)
+            for s in self.sensors:
+                s.position = self.position
         else:
             R = (
                 20
@@ -281,16 +312,11 @@ def main(background):
     pygame.display.set_caption("Robby Sim")
     screen.fill(background)
 
-    robby = Robot(screen)
+    robby = Robot(screen, direction=pi / 2 * 3)
     box = Box(200, 200, 1700, 880)
     box.draw(screen)
     robby._draw(box.lines())
     pygame.display.update()
-    assert robby.sensors[0].intersect(box.right) == (1700, 540)
-    assert robby.sensors[7].intersect(box.top) == (
-        371.1027254265813,
-        200.00000000000003,
-    )
 
     while running:
         screen.fill(background)
@@ -310,6 +336,14 @@ def main(background):
             robby.speed.left += STEP_SIZE
         if key_event[pygame.K_s]:
             robby.speed.left -= STEP_SIZE
+        if key_event[pygame.K_t]:
+            robby.speed.left += STEP_SIZE
+            robby.speed.right += STEP_SIZE
+        if key_event[pygame.K_g]:
+            robby.speed.left -= STEP_SIZE
+            robby.speed.right -= STEP_SIZE
+        if key_event[pygame.K_ESCAPE]:
+            running = False
         robby._update_position()
         robby._draw(box.lines())
         box.draw(screen)
