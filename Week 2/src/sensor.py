@@ -6,12 +6,12 @@ from position import Position
 
 class Sensor:
     position: Position
-    _direction: float
+    offset: float
     direction: float
 
     def __init__(self, x, y, direction) -> None:
         self.position = Position(x, y)
-        self._direction = direction
+        self.offset = direction
         self.direction = direction
 
     def is_intersect(self, line: Line):

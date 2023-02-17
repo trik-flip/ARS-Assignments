@@ -117,5 +117,5 @@ class Robot:
             self.position.y = result[1][0]
             self.direction = result[2][0]
             for s in self.sensors:
-                s.direction = self.direction + s._direction
+                s.direction = self.direction + s.offset
                 s.position = self.position
