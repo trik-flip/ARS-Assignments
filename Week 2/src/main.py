@@ -1,6 +1,7 @@
 from math import pi
 
 import pygame
+
 from line import Line
 from box import Box
 from robot import Robot
@@ -16,6 +17,7 @@ BLACK = (0, 0, 0)
 STEP_SIZE = 0.001
 
 
+
 box_x1=200
 box_x2=1700
 box_y1=200
@@ -24,6 +26,7 @@ box_tuple= (box_x1, box_y1, box_x2, box_y2)
 background = WHITE
 running = True
 pygame.init()
+
 screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Robby Sim")
 screen.fill(background)
