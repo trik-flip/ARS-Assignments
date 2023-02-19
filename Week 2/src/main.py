@@ -13,9 +13,14 @@ BLACK = (0, 0, 0)
 
 
 (width, height) = (1920, 1080)
-STEP_SIZE = 0.0001
+STEP_SIZE = 0.001
 
 
+box_x1=200
+box_x2=1700
+box_y1=200
+box_y2=880
+box_tuple= (box_x1, box_y1, box_x2, box_y2)
 background = WHITE
 running = True
 pygame.init()
@@ -23,12 +28,13 @@ screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Robby Sim")
 screen.fill(background)
 
-robby = Robot(screen, direction=pi / 2 * 3)
-box = Box(200, 200, 1700, 880)
+robby = Robot(screen, direction=pi)
+box = Box(box_x1, box_y1, box_x2, box_y2)  # box
 box.draw(screen)
 robby._draw(box.lines())
 pygame.display.update()
-line = Line(200, 500, 700, 200)
+line = Line(0,0,0,0)
+# line = Line(200, 500, 700, 200)
 while running:
     screen.fill(background)
     ev = pygame.event.get()
@@ -53,6 +59,11 @@ while running:
     if key_event[pygame.K_g]:
         robby.speed.left -= STEP_SIZE
         robby.speed.right -= STEP_SIZE
+    if key_event[pygame.K_r]:
+        robby.position.x=1920 / 2
+        robby.position.y=1080 / 2
+        robby.speed.left = 0
+        robby.speed.right = 0
     if key_event[pygame.K_x]:
         robby.speed.left = 0
         robby.speed.right = 0
