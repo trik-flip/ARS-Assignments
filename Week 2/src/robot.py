@@ -59,6 +59,11 @@ class Robot:
             self.position.to_tuple(),
             self.position.to_tuple_with_movement(t_x * self.size, t_y * self.size),
         )
+        speed_label1 = myFont.render(str(round(self.speed.left*10)), 1, (0, 0, 0))
+        speed_label2 = myFont.render(str(round(self.speed.right*10)), 1, (0, 0, 0))
+        self.screen.blit(speed_label1, self.position.to_tuple_with_movement(t_x - .3 * self.size, t_y - self.size))
+        self.screen.blit(speed_label2, self.position.to_tuple_with_movement(t_x - .3 * self.size, t_y))
+
         for sensor in self.sensors:
             t_x = cos(sensor.direction)
             t_y = sin(sensor.direction)
@@ -87,16 +92,17 @@ class Robot:
 
             pygame.draw.line(
                 self.screen,
-                (25, 0, 0),
+                (255, 0, 0),
                 self.position.to_tuple_with_movement(self.size * t_x, self.size * t_y),
                 (p.x, p.y),
             )
 
             sensor_val=round(math.sqrt((start[0] - p.x) ** 2 + (start[1] - p.y) ** 2))
             sensor_disp=myFont.render(str(sensor_val), 1, (0,0,0))
+            self.screen.blit(sensor_disp, self.position.to_tuple_with_movement(self.size*3 * t_x - .5 * self.size, self.size*3 * t_y - .5 * self.size))
 
-            self.screen.blit(sensor_disp, self.position.to_tuple_with_movement(self.size*3 * t_x, self.size*3 * t_y))
-    def _update_position(self,map):
+
+    def _update_position(self):
         # v=abs(self.speed.left+self.speed.right)/2
         prev_x=self.position.x
         prev_y=self.position.y
