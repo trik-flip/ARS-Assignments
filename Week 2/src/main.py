@@ -13,7 +13,7 @@ RED = (255, 0, 0)
 BLACK = (0, 0, 0)
 
 
-(width, height) = (1920, 1080)
+(width, height) = (1900, 1060)
 STEP_SIZE = 0.001
 
 
@@ -35,9 +35,11 @@ robby = Robot(screen, direction=pi)
 box = Box(box_x1, box_y1, box_x2, box_y2)  # box
 box.draw(screen)
 robby._draw(box.lines())
+
 pygame.display.update()
-line = Line(0,0,0,0)
+line = Line(box_x1, box_y1,box_x2/2, box_y2/2)
 # line = Line(200, 500, 700, 200)
+map=[line]+box.lines()
 while running:
     screen.fill(background)
     ev = pygame.event.get()
@@ -72,7 +74,7 @@ while running:
         robby.speed.right = 0
     if key_event[pygame.K_ESCAPE]:
         running = False
-    robby._update_position()
+    robby._update_position(map)
     robby._draw(box.lines() + [line])
     box.draw(screen)
 

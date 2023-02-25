@@ -7,6 +7,11 @@ from position import Position
 from pygame.surface import Surface
 from sensor import Sensor
 from velocity import Velocity
+from box import Box
+from line import Line
+import shapely
+from shapely.geometry import Point, LineString
+
 pygame.font.init()
 myFont = pygame.font.SysFont("Times New Roman", 18)
 class Robot:
@@ -19,7 +24,7 @@ class Robot:
         speed=(0, 0),
         direction=0.0,
         sensors=12,
-        box_tuple=(200,200,1700,880)
+        box_tuple=Box(200,200,1700,880)
     ) -> None:
         self.position = Position(*position)
         self.speed = Velocity(*speed)
@@ -82,7 +87,7 @@ class Robot:
 
             pygame.draw.line(
                 self.screen,
-                (255, 0, 0),
+                (25, 0, 0),
                 self.position.to_tuple_with_movement(self.size * t_x, self.size * t_y),
                 (p.x, p.y),
             )
@@ -91,7 +96,7 @@ class Robot:
             sensor_disp=myFont.render(str(sensor_val), 1, (0,0,0))
 
             self.screen.blit(sensor_disp, self.position.to_tuple_with_movement(self.size*3 * t_x, self.size*3 * t_y))
-    def _update_position(self):
+    def _update_position(self,map):
         # v=abs(self.speed.left+self.speed.right)/2
         prev_x=self.position.x
         prev_y=self.position.y
@@ -101,11 +106,9 @@ class Robot:
         if self.speed.is_straight():
             self.position.x += self.speed.left * cos(self.direction)
             self.position.y += self.speed.left * sin(self.direction)
-            if ((self.position.x > (self.box_tuple[2] - self.size)) or (self.position.x) < (
-                    self.box_tuple[0] + self.size)):
+            if((self.position.x> (self.box_tuple.right.start.x-self.size)) or (self.position.x)<(self.box_tuple.left.start.x+self.size)):
                 self.position.x = prev_x
-            if ((self.position.y > (self.box_tuple[3] - self.size)) or (self.position.y) < (
-                    self.box_tuple[1] + self.size)):
+            if ((self.position.y > (self.box_tuple.bottom.start.y - self.size)) or (self.position.y) < (self.box_tuple.top.start.y + self.size)):
                 self.position.y = prev_y
             for s in self.sensors:
                 s.position = self.position
@@ -140,10 +143,22 @@ class Robot:
             self.position.x = result[0][0]
             self.position.y = result[1][0]
             self.direction = result[2][0]
-            if((self.position.x> (self.box_tuple[2]-self.size)) or (self.position.x)<(self.box_tuple[0]+self.size)):
+            if((self.position.x> (self.box_tuple.right.start.x-self.size)) or (self.position.x)<(self.box_tuple.left.start.x+self.size)):
                 self.position.x=prev_x
-            if ((self.position.y > (self.box_tuple[3] - self.size)) or (self.position.y) < (self.box_tuple[1] + self.size)):
+
+
+                self.speed
+                self.speed
+            if ((self.position.y > (self.box_tuple.bottom.start.y - self.size)) or (self.position.y) < (self.box_tuple.top.start.y + self.size)):
                 self.position.y = prev_y
+
+            # for line in map:
+            #
+            #     circle = Point(self.position.x,self.position.y).buffer(self.size)
+            #     shapelyline= LineString([(line.to_tuple)])
+            #     intersection=circle.intersection(shapelyline)
+            #     sensor_disp = myFont.render(str(intersection), 1, (0, 0, 0))
+            #      self.screen.blit(sensor_disp,self.position.to_tuple_with_movement(self.size * 3 * t_x, self.size * 3 * t_y))
             for s in self.sensors:
                 s.direction = self.direction + s.offset
                 s.position = self.position
