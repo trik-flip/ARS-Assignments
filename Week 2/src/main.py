@@ -17,12 +17,11 @@ BLACK = (0, 0, 0)
 STEP_SIZE = 0.001
 
 
-
-box_x1=200
-box_x2=1700
-box_y1=200
-box_y2=880
-box_tuple= (box_x1, box_y1, box_x2, box_y2)
+box_x1 = 200
+box_x2 = 1700
+box_y1 = 200
+box_y2 = 880
+box_tuple = (box_x1, box_y1, box_x2, box_y2)
 background = WHITE
 running = True
 pygame.init()
@@ -37,9 +36,9 @@ box.draw(screen)
 robby._draw(box.lines())
 
 pygame.display.update()
-line = Line(box_x1, box_y1,box_x2/2, box_y2/2)
+line = Line(box_x1, box_y1, box_x2 / 2, box_y2 / 2)
 # line = Line(200, 500, 700, 200)
-map=[line]+box.lines()
+map = [line] + box.lines()
 while running:
     screen.fill(background)
     ev = pygame.event.get()
@@ -65,10 +64,11 @@ while running:
         robby.speed.left -= STEP_SIZE
         robby.speed.right -= STEP_SIZE
     if key_event[pygame.K_r]:
-        robby.position.x=1920 / 2
-        robby.position.y=1080 / 2
+        robby.position.x = 1920 / 2
+        robby.position.y = 1080 / 2
         robby.speed.left = 0
         robby.speed.right = 0
+        robby.direction = pi
     if key_event[pygame.K_x]:
         robby.speed.left = 0
         robby.speed.right = 0

@@ -14,6 +14,8 @@ from shapely.geometry import Point, LineString
 
 pygame.font.init()
 myFont = pygame.font.SysFont("Times New Roman", 18)
+
+
 class Robot:
     def __init__(
         self,
@@ -24,7 +26,7 @@ class Robot:
         speed=(0, 0),
         direction=0.0,
         sensors=12,
-        box_tuple=Box(200,200,1700,880)
+        box_tuple=Box(200, 200, 1700, 880),
     ) -> None:
         self.position = Position(*position)
         self.speed = Velocity(*speed)
@@ -36,7 +38,8 @@ class Robot:
             Sensor(*self.position.to_tuple(), (pi * 2 / sensors) * i)
             for i in range(sensors)
         ]
-        self.box_tuple=box_tuple
+        self.box_tuple = box_tuple
+
     sensors: list[Sensor]
     position: Position
     speed: Velocity
@@ -45,6 +48,7 @@ class Robot:
     size: float
     color: tuple[int, int, int]
     box_tuple = tuple[int, int, int, int]
+
     def _clear(self, color):
         pygame.draw.circle(self.screen, color, self.position.to_tuple(), self.size * 5)
 
@@ -59,10 +63,18 @@ class Robot:
             self.position.to_tuple(),
             self.position.to_tuple_with_movement(t_x * self.size, t_y * self.size),
         )
-        speed_label1 = myFont.render(str(round(self.speed.left*10)), 1, (0, 0, 0))
-        speed_label2 = myFont.render(str(round(self.speed.right*10)), 1, (0, 0, 0))
-        self.screen.blit(speed_label1, self.position.to_tuple_with_movement(t_x - .3 * self.size, t_y - self.size))
-        self.screen.blit(speed_label2, self.position.to_tuple_with_movement(t_x - .3 * self.size, t_y))
+        speed_label1 = myFont.render(str(round(self.speed.left * 10)), 1, (0, 0, 0))
+        speed_label2 = myFont.render(str(round(self.speed.right * 10)), 1, (0, 0, 0))
+        self.screen.blit(
+            speed_label1,
+            self.position.to_tuple_with_movement(
+                t_x - 0.3 * self.size, t_y - self.size
+            ),
+        )
+        self.screen.blit(
+            speed_label2,
+            self.position.to_tuple_with_movement(t_x - 0.3 * self.size, t_y),
+        )
 
         for sensor in self.sensors:
             t_x = cos(sensor.direction)
@@ -82,7 +94,9 @@ class Robot:
                 self.size * 6 * t_x, self.size * 6 * t_y
             )
             p_max = Position(x, y)
-            start=self.position.to_tuple_with_movement(self.size * t_x, self.size * t_y)
+            start = self.position.to_tuple_with_movement(
+                self.size * t_x, self.size * t_y
+            )
             if math.sqrt((start[0] - p.x) ** 2 + (start[1] - p.y) ** 2) > 100:
                 p.x, p.y = p_max.x, p_max.y
             # p.x, p.y = min(p_max.x, p.x), min(p_max.y, p.y)
@@ -97,24 +111,38 @@ class Robot:
                 (p.x, p.y),
             )
 
-            sensor_val=round(math.sqrt((start[0] - p.x) ** 2 + (start[1] - p.y) ** 2))
-            sensor_disp=myFont.render(str(sensor_val), 1, (0,0,0))
-            self.screen.blit(sensor_disp, self.position.to_tuple_with_movement(self.size*3 * t_x - .5 * self.size, self.size*3 * t_y - .5 * self.size))
+            sensor_val = round(math.sqrt((start[0] - p.x) ** 2 + (start[1] - p.y) ** 2))
+            sensor_disp = myFont.render(str(sensor_val), 1, (0, 0, 0))
+            self.screen.blit(
+                sensor_disp,
+                self.position.to_tuple_with_movement(
+                    self.size * 3 * t_x - 0.5 * self.size,
+                    self.size * 3 * t_y - 0.5 * self.size,
+                ),
+            )
 
-
-    def _update_position(self):
+    def _update_position(self, map: list[Line]):
         # v=abs(self.speed.left+self.speed.right)/2
-        prev_x=self.position.x
-        prev_y=self.position.y
+        prev_x = self.position.x
+        prev_y = self.position.y
+
+        for i, line in enumerate(map):
+            if line.distance_to(self.position) < self.size:
+                print("collision")
+
         if (self.speed.left + self.speed.right) == 0:
-            self.position.x=self.position.x
-            self.position.y=self.position.y
+            self.position.x = self.position.x
+            self.position.y = self.position.y
         if self.speed.is_straight():
             self.position.x += self.speed.left * cos(self.direction)
             self.position.y += self.speed.left * sin(self.direction)
-            if((self.position.x> (self.box_tuple.right.start.x-self.size)) or (self.position.x)<(self.box_tuple.left.start.x+self.size)):
+            if (self.position.x > (self.box_tuple.right.start.x - self.size)) or (
+                self.position.x
+            ) < (self.box_tuple.left.start.x + self.size):
                 self.position.x = prev_x
-            if ((self.position.y > (self.box_tuple.bottom.start.y - self.size)) or (self.position.y) < (self.box_tuple.top.start.y + self.size)):
+            if (self.position.y > (self.box_tuple.bottom.start.y - self.size)) or (
+                self.position.y
+            ) < (self.box_tuple.top.start.y + self.size):
                 self.position.y = prev_y
             for s in self.sensors:
                 s.position = self.position
@@ -149,22 +177,18 @@ class Robot:
             self.position.x = result[0][0]
             self.position.y = result[1][0]
             self.direction = result[2][0]
-            if((self.position.x> (self.box_tuple.right.start.x-self.size)) or (self.position.x)<(self.box_tuple.left.start.x+self.size)):
-                self.position.x=prev_x
-
+            if (self.position.x > (self.box_tuple.right.start.x - self.size)) or (
+                self.position.x
+            ) < (self.box_tuple.left.start.x + self.size):
+                self.position.x = prev_x
 
                 self.speed
                 self.speed
-            if ((self.position.y > (self.box_tuple.bottom.start.y - self.size)) or (self.position.y) < (self.box_tuple.top.start.y + self.size)):
+            if (self.position.y > (self.box_tuple.bottom.start.y - self.size)) or (
+                self.position.y
+            ) < (self.box_tuple.top.start.y + self.size):
                 self.position.y = prev_y
 
-            # for line in map:
-            #
-            #     circle = Point(self.position.x,self.position.y).buffer(self.size)
-            #     shapelyline= LineString([(line.to_tuple)])
-            #     intersection=circle.intersection(shapelyline)
-            #     sensor_disp = myFont.render(str(intersection), 1, (0, 0, 0))
-            #      self.screen.blit(sensor_disp,self.position.to_tuple_with_movement(self.size * 3 * t_x, self.size * 3 * t_y))
             for s in self.sensors:
                 s.direction = self.direction + s.offset
                 s.position = self.position

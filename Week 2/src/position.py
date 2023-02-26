@@ -18,3 +18,9 @@ class Position:
 
     def to_tuple_with_movement(self, x, y):
         return self.x + x, self.y + y
+
+    def __repr__(self) -> str:
+        return f"{self.x}, {self.y}"
+
+    def y_axis_intersect(self, gradient):
+        return self.y - self.x * gradient
