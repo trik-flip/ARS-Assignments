@@ -1,4 +1,4 @@
-from math import cos, pi, sin, atan, tan, atan2
+from math import cos, pi, sin, atan
 
 import math
 import numpy as np
@@ -137,10 +137,11 @@ class Robot:
 
         return angle
 
-    def update_position(self, map: list[Line]):
+    def update_position(self, lines: list[Line]):
         # v=abs(self.speed.left+self.speed.right)/2
         prev_x = self.position.x
         prev_y = self.position.y
+
         new_x = 0.0
         new_y = 0.0
         new_direction = 0.0
@@ -154,36 +155,17 @@ class Robot:
 
         velocity = self._calc_velocity(prev_x, prev_y, new_x, new_y)
 
-        for i, line in enumerate(map):
-            collision_point = velocity.intersect_point_with_radius(line, self.size)
-            if collision_point is not None:
-                pygame.draw.circle(
-                    self.screen, (255, 0, 0), collision_point.to_tuple(), 2
-                )
-
+        for line in lines:
             if line.distance_to(Position(new_x, new_y)) < self.size:
-                # what to do if would collide
                 p = velocity.intersect_point(line)
                 if p is None:
                     raise Exception("This is not a valid update")
-                # TODO(step 1): update until hit the wall
-                # calc point at which the robot hits the wall
                 collision_point = velocity.intersect_point_with_radius(line, self.size)
                 if collision_point is None:
                     raise Exception("Can't be None")
 
-                # TODO(step 2): update only in parallel direction
-                # pygame.draw.circle(
-                #     self.screen, (255, 0, 0), collision_point.to_tuple(), 2
-                # )
                 remaining_update = Position(new_x, new_y) - collision_point
                 x, y = remaining_update.to_tuple()
-                pygame.draw.circle(self.screen, (255, 0, 0), (300, 300), 1)
-                pygame.draw.circle(
-                    self.screen, (0, 0, 0), (x * 10 + 300, y * 10 + 300), 3
-                )
-
-                # TODO(step 2.1): update x and y so it is corresponded to the line we're hitting
 
                 delta_line = Line(0, 0, x, y)
 
@@ -192,56 +174,9 @@ class Robot:
                 q = sin(beta) * delta_line.len()
                 u = sin(alpha) * q
                 t = cos(alpha) * q
-                if (self.direction - line.radians()) % pi * 2 in [pi / 2, 3 * pi / 2]:
-                    new_x = prev_x
-                    new_y = prev_y
-                    break
-                else:
-                    angle = pi - line.radians()
-                    self.position.x = prev_x
-                    self.position.y = prev_y
-                    self.position.x += self.speed.left * cos(angle + self.direction)
-                    self.position.y += self.speed.left * sin(angle + self.direction)
 
-                # pygame.draw.circle(self.screen, (255, 0, 0), (300, 300), 1)
-                # pygame.draw.circle(
-                #     self.screen, (0, 0, 0), (u * 10 + 300, t * 10 + 300), 3
-
-                # beta = delta_line.radians() - line.radians()
-                # x2 = cos(beta) * x - sin(beta) * y
-                # y2 = sin(beta) * x + cos(beta) * y
-                # new_x -= x2
-                # new_y -= y2
-
-                # TODO(step 2.2): update delta_line with new x and y
-
-                # new_x, new_y = collision_point.to_tuple()
-                print(remaining_update)
-                # beneath line and line going down
-                if line < self.position and line.gradient() > 0:
-                    print(f"C1")
-                    new_x += u
-                    new_y -= t
-                # beneath line and line going up
-                elif line < self.position and line.gradient() < 0:
-                    print(f"C2")
-                    new_x += u
-                    new_y -= t
-                # above line and line going down
-                elif line.gradient() > 0:
-                    print(f"C3")
-                    new_x += u
-                    new_y -= t
-                # above line and line going up
-                else:
-                    print(f"C4")
-                    new_x += u
-                    new_y -= t
-                # print(
-                #     f"{collision_point}, {self.position} {collision_point - self.position}"
-                # )
-                p_speed = cos(atan(line.gradient()) - self.direction)
-                # get speed in parallel way
+                new_x += u
+                new_y -= t
 
         self._set_position(new_x, new_y, new_direction)
         self._update_sensors()
