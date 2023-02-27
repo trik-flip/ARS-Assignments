@@ -31,15 +31,19 @@ pygame.display.set_caption("Robby Sim")
 screen.fill(background)
 
 robby = Robot(screen, direction=0)
-box = Box(box_x1, box_y1, box_x2, box_y2)  # box
+box = Box(box_x1, box_y1, box_x2, box_y2)
+box2 = Box(500,350,1400,730)# box
 box.draw(screen)
-robby._draw(box.lines())
+box2.draw(screen)
+robby._draw(box2.lines()+box.lines())
 
 pygame.display.update()
-line = Line(1000, 400,1090, 700)
-line2 = Line(400, 400,490, 700)
+# line = Line(1000, 400,1000, 700)
+# line2 = Line(400, 400,400, 700)
+line = Line(0,0,0,0)
+line2 = Line(0,0,0,0)
 # line = Line(200, 500, 700, 200)
-map=[line2]+[line]+box.lines()
+map=[line2]+[line]+box.lines()+box2.lines()
 while running:
     screen.fill(background)
     ev = pygame.event.get()
@@ -76,8 +80,9 @@ while running:
     if key_event[pygame.K_ESCAPE]:
         running = False
     robby._update_position(map)
-    robby._draw(box.lines() + [line] + [line2])
+    robby._draw(box.lines() + box2.lines()+ [line] + [line2])
     box.draw(screen)
+    box2.draw(screen)
 
     pygame.draw.line(screen, (0, 0, 0), *line.to_tuple())
     pygame.draw.line(screen, (0, 0, 0), *line2.to_tuple())

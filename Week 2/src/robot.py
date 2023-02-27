@@ -122,7 +122,7 @@ class Robot:
         return angle
 
     def _update_position(self, map: list[Line]):
-        # v=(self.speed.left+self.speed.right)/2
+        v=(self.speed.left+self.speed.right)/2
         # l=self.speed.left
         # r=self.speed.right
         prev_x = self.position.x
@@ -159,10 +159,12 @@ class Robot:
                         self.position.y = prev_y
                     else:
                         line_angle=pi-atan(line.gradient())
-                        self.position.x += ((self.speed.left * cos(line_angle)))
-                        self.position.y += (self.speed.left * sin(line_angle))
+                        self.position.x = prev_x
+                        self.position.y = prev_y
+                        self.position.x += (self.speed.left * cos(line_angle+self.direction))
+                        self.position.y += (self.speed.left * sin(line_angle+self.direction))
                         print(angle_intersection,pi/2)
-
+                        collision = False
                     # self.speed.left = v_component * self.speed.left / (self.speed.left + self.speed.right)   # case for inertia considered
                     # self.speed.right = v_component * self.speed.right / (self.speed.left + self.speed.right)
 
@@ -230,31 +232,60 @@ class Robot:
                         line_angle = 2*pi- atan(line.gradient())# for slide up
                     elif (((self.direction%2*pi) > 0 and (self.direction%2*pi)<pi) or ((self.direction%2*pi) < -pi and (self.direction%2*pi)>-2*pi)):
                         line_angle = pi - atan(line.gradient())  # for slide down
-                    # v_component = v * cos(angle_intersection)
-                    # if self.speed.is_straight():
-                    #     self.position.x += self.speed.left * cos(line_angle)
-                    #     self.position.y += self.speed.left * sin(line_angle)
-                    # else:
+                    comp_angle=pi/2-angle_intersection
+                    v_component = v * cos(comp_angle)
+                    print(v, v_component)
+                    l = v_component * self.speed.left / (self.speed.left + self.speed.right)
+                    r = v_component * self.speed.right / (self.speed.left + self.speed.right)
+                    R = (
+                            20
+                            / 2
+                            * (r + l)
+                            / (l - r)
+                    )
+
+                    w = (l - r) / 20
+
                     ICC = [
-                        self.position.x - R * sin(line_angle),
-                        self.position.y + R * cos(line_angle),
+                        self.position.x - R * sin(line_angle+self.direction),
+                        self.position.y + R * cos(line_angle+self.direction),
                     ]
+
+                    a = np.array([[cos(w), -sin(w), 0], [sin(w), cos(w), 0], [0, 0, 1]])
+
                     b = np.array(
                         [
                             [self.position.x - ICC[0]],
                             [self.position.y - ICC[1]],
-                            [line_angle],
+                            [line_angle+self.direction],
                         ]
                     )
+
                     c = np.array([[ICC[0]], [ICC[1]], [w]])
 
                     result = a.dot(b) + c
+                    # ICC = [
+                    #     self.position.x - R * sin(line_angle+self.direction),
+                    #     self.position.y + R * cos(line_angle+self.direction),
+                    # ]
+                    # b = np.array(
+                    #     [
+                    #         [self.position.x - ICC[0]],
+                    #         [self.position.y - ICC[1]],
+                    #         [line_angle+self.direction],
+                    #     ]
+                    # )
+                    # c = np.array([[ICC[0]], [ICC[1]], [w]])
+                    #
+                    # result = a.dot(b) + c
                     if round(angle_intersection,2)==round(pi/2,2) or round(angle_intersection,2)== round(3*pi/2,2):
                         self.position.x = prev_x
                         self.position.y = prev_y
                     else:
                         self.position.x = result[0][0]
                         self.position.y = result[1][0]
+                        self.position.x = prev_x
+                        self.position.y = prev_y
                     # self.speed.left = v_component * self.speed.left / (self.speed.left + self.speed.right)   # case for inertia considered
                     # self.speed.right = v_component * self.speed.right / (self.speed.left + self.speed.right)
 
