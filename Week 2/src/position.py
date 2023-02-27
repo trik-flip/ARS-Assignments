@@ -20,7 +20,12 @@ class Position:
         return self.x + x, self.y + y
 
     def __repr__(self) -> str:
-        return f"{self.x}, {self.y}"
+        return f"{self.x:.2f}, {self.y:.2f}"
 
     def y_axis_intersect(self, gradient):
         return self.y - self.x * gradient
+
+    def __sub__(self, o):
+        if not isinstance(o, Position):
+            raise Exception("This is no position")
+        return Position(self.x - o.x, self.y - o.y)

@@ -14,7 +14,7 @@ class Sensor:
         self.offset = direction
         self.direction = direction
 
-    def is_intersect(self, line: Line):
+    def does_intersect(self, line: Line):
         if line.gradient() == self.gradient():
             return False
 
