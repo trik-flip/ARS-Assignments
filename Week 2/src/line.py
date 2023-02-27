@@ -90,6 +90,12 @@ class Line:
             gr = self.gradient()
         return self.start.y - gr * self.start.x
 
+    def strict_intersect_point(self, line):
+        p = self.intersect_point(line)
+        if p is None:
+            raise Exception("p can't be None")
+        return p
+
     def intersect_point(self, line):
         if not isinstance(line, Line):
             raise WrongClassException("line should be of Type Line")
@@ -130,7 +136,7 @@ class Line:
             else:
                 new_l.start.y -= r
                 new_l.end.y -= r
-            return self.intersect_point(new_l)
+            return self.strict_intersect_point(new_l)
         if abs(line.gradient()) > 1e15:
             if self.start.x > line.start.x:
                 new_l.start.x += r
@@ -138,7 +144,7 @@ class Line:
             else:
                 new_l.start.x -= r
                 new_l.end.x -= r
-            return self.intersect_point(new_l)
+            return self.strict_intersect_point(new_l)
 
         # get gradient of line
         delta = r / cos(line.radians())
@@ -154,9 +160,7 @@ class Line:
             new_l.end.y -= delta
 
         # TODO(step 3): calc new intersection_point
-        p = self.intersect_point(new_l)
-        if p is None:
-            raise Exception("Don't collide")
+        p = self.strict_intersect_point(new_l)
         return p
 
     def __lt__(self, o):
