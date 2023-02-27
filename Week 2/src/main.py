@@ -21,6 +21,7 @@ box_x1 = 200
 box_x2 = 1700
 box_y1 = 200
 box_y2 = 880
+
 box_tuple = (box_x1, box_y1, box_x2, box_y2)
 background = WHITE
 running = True
@@ -32,7 +33,6 @@ screen.fill(background)
 
 robby = Robot(screen, direction=0)
 box = Box(box_x1, box_y1, box_x2, box_y2)
-box2 = Box(500,350,1400,730)# box
 box.draw(screen)
 robby.draw(box.lines())
 
@@ -81,7 +81,6 @@ while running:
     robby.update_position(map)
     robby.draw(map)
     box.draw(screen)
-    box2.draw(screen)
 
     pygame.draw.line(screen, (0, 0, 0), *line.to_tuple())
     pygame.draw.line(screen, (0, 0, 0), *line2.to_tuple())
