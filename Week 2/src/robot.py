@@ -60,7 +60,6 @@ class Robot:
             self.position.to_tuple(),
             self.position.to_tuple_with_movement(t_x * self.size, t_y * self.size),
         )
-        direction_label = myFont.render(str(self.direction), True, (0, 0, 0))
         speed_label1 = myFont.render(str(round(self.speed.left * 10)), True, (0, 0, 0))
         speed_label2 = myFont.render(str(round(self.speed.right * 10)), True, (0, 0, 0))
         self.screen.blit(
@@ -119,103 +118,72 @@ class Robot:
                 ),
             )
 
-    def get_angle(self, m1, m2):
-        if m1 == float("inf") or m2 == 0:
-            temp = m1
-            m1 = m2
-            m2 = temp
-        # print(m1,m2)
-        if m1 == m2:
-            angle = 0
-        elif m1 == -1 / m2:
-            angle = pi / 2
-        else:
-            if m2 == float("inf"):
-                angle = pi / 2 - atan(m1)
-            else:
-                angle = atan((m1 - m2) / (1 + m1 * m2))
-
-        return angle
-
     def update_position(self, lines: list[Line]):
-        # v=abs(self.speed.left+self.speed.right)/2
-        prev_x = self.position.x
-        prev_y = self.position.y
-
-        new_x = 0.0
-        new_y = 0.0
-        new_direction = 0.0
-
-        if self.speed.is_straight():
-            result = self._calc_update_straight()
-        else:
-            result = self._calc_update_in_turn()
-
-        new_x, new_y, new_direction = result
-
-        velocity = self._calc_velocity(prev_x, prev_y, new_x, new_y)
+        result = self._calc_update()
+        x, y, direction = result
+        velocity = self._calc_velocity(*self.position.to_tuple(), x, y)
 
         for line in lines:
-            if line.distance_to(Position(new_x, new_y)) < self.size:
-                p = velocity.intersect_point(line)
-                if p is None:
-                    raise Exception("This is not a valid update")
+            if line.distance_to(Position(x, y)) < self.size:
                 collision_point = velocity.intersect_point_with_radius(line, self.size)
-                if collision_point is None:
-                    raise Exception("Can't be None")
 
-                remaining_update = Position(new_x, new_y) - collision_point
-                x, y = remaining_update.to_tuple()
+                remaining_update = Position(x, y) - collision_point
+                delta_line = Line(0, 0, *remaining_update.to_tuple())
 
-                delta_line = Line(0, 0, x, y)
-
+                # Source: https://matthew-brett.github.io/teaching/rotation_2d.html
+                # Image showing the x and y delta of the velocity parallel to the wall
                 alpha = line.radians()
                 beta = self.direction - alpha
                 q = sin(beta) * delta_line.len()
                 u = sin(alpha) * q
                 t = cos(alpha) * q
 
-                new_x += u
-                new_y -= t
+                x += u
+                y -= t
 
-        self._set_position(new_x, new_y, new_direction)
+        self._set_position(x, y, direction)
         self._update_sensors()
 
-    def _calc_velocity(self, prev_x, prev_y, new_x, new_y):
-        if new_x == prev_x and new_y == prev_y:
-            velocity = Line(
-                prev_x,
-                prev_y,
-                prev_x + cos(self.direction),
-                prev_y + sin(self.direction),
-            )
-        else:
-            velocity = Line(prev_x, prev_y, new_x, new_y)
-        return velocity
+    def _calc_update(self):
+        if self.speed.is_straight():
+            return self._calc_straight_update()
+        return self._calc_circle_update()
 
-    def _calc_update_straight(self) -> tuple[float, float, float]:
+    def _calc_velocity(self, x1, y1, x2, y2):
+        if x2 == x1 and y2 == y1:
+            return Line(
+                x1,
+                y1,
+                x1 + cos(self.direction),
+                y1 + sin(self.direction),
+            )
+        return Line(x1, y1, x2, y2)
+
+    def _calc_straight_update(self) -> tuple[float, float, float]:
         x = self.position.x + self.speed.left * cos(self.direction)
         y = self.position.y + self.speed.left * sin(self.direction)
         return x, y, self.direction
 
-    def _calc_update_in_turn(self) -> tuple[float, float, float]:
+    def _calc_circle_update(self) -> tuple[float, float, float]:
         w = self._calc_w()
-        R = self._calc_R()
-        ICC = self._calc_ICC(R)
+        R = self._calc_r()
+        ICC = self._calc_icc(R)
+
         a = self._calc_a(w)
         b = self._calc_b(ICC)
         c = self._calc_c(w, ICC)
+
         result = a.dot(b) + c
         return result[0][0], result[1][0], result[2][0]
 
-    def _calc_c(self, w, ICC):
-        return np.array([[ICC[0]], [ICC[1]], [w]])
+    def _calc_c(self, w, icc: list[float]):
+        return np.array([[icc[0]], [icc[1]], [w]])
 
-    def _calc_b(self, ICC):
+    def _calc_b(self, icc: list[float]):
         return np.array(
             [
-                [self.position.x - ICC[0]],
-                [self.position.y - ICC[1]],
+                [self.position.x - icc[0]],
+                [self.position.y - icc[1]],
                 [self.direction],
             ]
         )
@@ -223,16 +191,16 @@ class Robot:
     def _calc_a(self, w):
         return np.array([[cos(w), -sin(w), 0], [sin(w), cos(w), 0], [0, 0, 1]])
 
-    def _calc_ICC(self, R):
+    def _calc_icc(self, r: float):
         return [
-            self.position.x - R * sin(self.direction),
-            self.position.y + R * cos(self.direction),
+            self.position.x - r * sin(self.direction),
+            self.position.y + r * cos(self.direction),
         ]
 
     def _calc_w(self):
         return (self.speed.left - self.speed.right) / 20
 
-    def _calc_R(self):
+    def _calc_r(self):
         return (
             20
             / 2
@@ -240,10 +208,10 @@ class Robot:
             / (self.speed.left - self.speed.right)
         )
 
-    def _set_position(self, new_x, new_y, new_direction):
-        self.position.x = new_x
-        self.position.y = new_y
-        self.direction = new_direction
+    def _set_position(self, x, y, direction):
+        self.position.x = x
+        self.position.y = y
+        self.direction = direction
 
     def _update_sensors(self):
         for s in self.sensors:
