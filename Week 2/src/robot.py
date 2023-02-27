@@ -188,7 +188,7 @@ class Robot:
                 delta_line = Line(0, 0, x, y)
 
                 alpha = line.radians()
-                beta = delta_line.radians() - alpha
+                beta = self.direction - alpha
                 q = sin(beta) * delta_line.len()
                 u = sin(alpha) * q
                 t = cos(alpha) * q
@@ -220,18 +220,18 @@ class Robot:
                 # beneath line and line going down
                 if line < self.position and line.gradient() > 0:
                     print(f"C1")
-                    new_x -= u
-                    new_y += t
+                    new_x += u
+                    new_y -= t
                 # beneath line and line going up
                 elif line < self.position and line.gradient() < 0:
                     print(f"C2")
-                    new_x -= u
-                    new_y += t
+                    new_x += u
+                    new_y -= t
                 # above line and line going down
                 elif line.gradient() > 0:
                     print(f"C3")
-                    new_x -= u
-                    new_y += t
+                    new_x += u
+                    new_y -= t
                 # above line and line going up
                 else:
                     print(f"C4")
