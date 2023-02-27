@@ -30,8 +30,9 @@ screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Robby Sim")
 screen.fill(background)
 
-robby = Robot(screen, direction=pi)
-box = Box(box_x1, box_y1, box_x2, box_y2)  # box
+robby = Robot(screen, direction=0)
+box = Box(box_x1, box_y1, box_x2, box_y2)
+box2 = Box(500,350,1400,730)# box
 box.draw(screen)
 robby.draw(box.lines())
 
@@ -67,8 +68,8 @@ while running:
         robby.speed.left -= STEP_SIZE
         robby.speed.right -= STEP_SIZE
     if key_event[pygame.K_r]:
-        robby.position.x = 1920 / 2
-        robby.position.y = 1080 / 2
+        robby.position.x=1920 / 2
+        robby.position.y=1080 / 2
         robby.speed.left = 0
         robby.speed.right = 0
         robby.direction = pi
@@ -80,6 +81,7 @@ while running:
     robby.update_position(map)
     robby.draw(map)
     box.draw(screen)
+    box2.draw(screen)
 
     pygame.draw.line(screen, (0, 0, 0), *line.to_tuple())
     pygame.draw.line(screen, (0, 0, 0), *line2.to_tuple())

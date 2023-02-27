@@ -1,4 +1,4 @@
-from math import cos, pi, sin, atan
+from math import cos, pi, sin, atan, tan, atan2
 
 import math
 import numpy as np
@@ -60,6 +60,7 @@ class Robot:
             self.position.to_tuple(),
             self.position.to_tuple_with_movement(t_x * self.size, t_y * self.size),
         )
+        direction_label = myFont.render(str(self.direction), True, (0, 0, 0))
         speed_label1 = myFont.render(str(round(self.speed.left * 10)), True, (0, 0, 0))
         speed_label2 = myFont.render(str(round(self.speed.right * 10)), True, (0, 0, 0))
         self.screen.blit(
@@ -91,6 +92,7 @@ class Robot:
             x, y = self.position.to_tuple_with_movement(
                 self.size * 6 * t_x, self.size * 6 * t_y
             )
+
             p_max = Position(x, y)
             start = self.position.to_tuple_with_movement(
                 self.size * t_x, self.size * t_y
@@ -117,7 +119,26 @@ class Robot:
                 ),
             )
 
+    def get_angle(self, m1, m2):
+        if m1 == float("inf") or m2 == 0:
+            temp = m1
+            m1 = m2
+            m2 = temp
+        # print(m1,m2)
+        if m1 == m2:
+            angle = 0
+        elif m1 == -1 / m2:
+            angle = pi / 2
+        else:
+            if m2 == float("inf"):
+                angle = pi / 2 - atan(m1)
+            else:
+                angle = atan((m1 - m2) / (1 + m1 * m2))
+
+        return angle
+
     def update_position(self, map: list[Line]):
+        # v=abs(self.speed.left+self.speed.right)/2
         prev_x = self.position.x
         prev_y = self.position.y
         new_x = 0.0
@@ -171,6 +192,16 @@ class Robot:
                 q = sin(beta) * delta_line.len()
                 u = sin(alpha) * q
                 t = cos(alpha) * q
+                if (self.direction - line.radians()) % pi * 2 in [pi / 2, 3 * pi / 2]:
+                    new_x = prev_x
+                    new_y = prev_y
+                    break
+                else:
+                    angle = pi - line.radians()
+                    self.position.x = prev_x
+                    self.position.y = prev_y
+                    self.position.x += self.speed.left * cos(angle + self.direction)
+                    self.position.y += self.speed.left * sin(angle + self.direction)
 
                 # pygame.draw.circle(self.screen, (255, 0, 0), (300, 300), 1)
                 # pygame.draw.circle(
