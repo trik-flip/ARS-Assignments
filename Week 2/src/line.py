@@ -37,10 +37,9 @@ class Line:
 
     def _perpendicular_distance_to(self, point: Position):
         # Determine the shortest line
-        gradient = -1 / self.gradient()
 
         max_x = max(self.start.x, self.end.x, point.x)
-        max_y = gradient * max_x
+        max_y = self.perpendicular_gradient() * max_x
         l = Line(point.x, point.y, max_x, max_y)
 
         # calculate intersection point
@@ -55,12 +54,10 @@ class Line:
         return min(p1_distance, p2_distance)
 
     def _in_perpendicular_range(self, point: Position):
-        sg = self.gradient()
-        new_gradient = -1 / sg
-        y = point.y_axis_intersect(new_gradient)
+        y = point.y_axis_intersect(self.perpendicular_gradient())
 
-        y1 = self.start.y_axis_intersect(new_gradient)
-        y2 = self.end.y_axis_intersect(new_gradient)
+        y1 = self.start.y_axis_intersect(self.perpendicular_gradient())
+        y2 = self.end.y_axis_intersect(self.perpendicular_gradient())
         min_y = min(y1, y2)
         max_y = max(y1, y2)
 
@@ -85,6 +82,10 @@ class Line:
         return (self.end.y - self.start.y) / (self.end.x - self.start.x)
 
     @cache
+    def perpendicular_gradient(self):
+        return -1 / self.gradient()
+
+    @cache
     def y_axis_intersect(self, gr: float | None = None):
         if gr is None:
             gr = self.gradient()
@@ -97,8 +98,7 @@ class Line:
         return p
 
     def intersect_point(self, line):
-        if not isinstance(line, Line):
-            raise WrongClassException("line should be of Type Line")
+        assert isinstance(line, Line)
 
         lg = line.gradient()
         sg = self.gradient()
@@ -123,8 +123,7 @@ class Line:
         return Position(x, y)
 
     def intersect_point_with_radius(self, line, r: float):
-        if not isinstance(line, Line):
-            raise WrongClassException("line should be of Type Line")
+        assert isinstance(line, Line)
 
         new_l = line.copy()
 
@@ -169,7 +168,7 @@ class Line:
         if isinstance(o, Position):
             return self.y_axis_intersect() < o.y - self.gradient() * o.x
 
-        raise NotImplementedError()
+        return NotImplemented
 
     @cache
     def __repr__(self) -> str:
@@ -179,8 +178,7 @@ class Line:
         return Line(self.start.x, self.start.y, self.end.x, self.end.y)
 
     def does_intersect(self, line):
-        if not isinstance(line, Line):
-            raise WrongClassException("line should be of Type Line")
+        assert isinstance(line, Line)
 
         p = self.intersect_point(line)
 

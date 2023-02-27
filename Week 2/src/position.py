@@ -26,6 +26,5 @@ class Position:
         return self.y - self.x * gradient
 
     def __sub__(self, o):
-        if not isinstance(o, Position):
-            raise Exception("This is no position")
+        assert isinstance(o, Position)
         return Position(self.x - o.x, self.y - o.y)

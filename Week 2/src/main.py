@@ -56,16 +56,16 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN:
             # Possible to use something like "last_pos = pygame.mouse.get_pos()"
             x, y = pygame.mouse.get_pos()
-            robby.position.x = x
-            robby.position.y = y
+            robby.set_position(x, y)
         if event.type == pygame.QUIT:
             running = False
+
     key_event = pygame.key.get_pressed()
 
     if key_event[pygame.K_o] and o_pushed == False:
         robby.speed.right += STEP_SIZE
     o_pushed = key_event[pygame.K_o]
-    
+
     if key_event[pygame.K_l] and l_pushed == False:
         robby.speed.right -= STEP_SIZE
 
@@ -88,17 +88,21 @@ while running:
         robby.speed.right -= STEP_SIZE
 
     g_pushed = key_event[pygame.K_g]
+
     if key_event[pygame.K_r]:
         robby.position.x = 1920 / 2
         robby.position.y = 1080 / 2
         robby.speed.left = 0
         robby.speed.right = 0
         robby.direction = pi
+
     if key_event[pygame.K_x]:
         robby.speed.left = 0
         robby.speed.right = 0
+
     if key_event[pygame.K_ESCAPE]:
         running = False
+
     robby.update_position(map)
     robby.draw(map)
     box.draw(screen)

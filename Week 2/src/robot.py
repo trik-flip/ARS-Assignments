@@ -1,16 +1,13 @@
-from math import cos, pi, sin, atan
+from math import atan, cos, pi, sin, sqrt
 
-import math
 import numpy as np
 import pygame
+from box import Box
+from line import Line
 from position import Position
 from pygame.surface import Surface
 from sensor import Sensor
 from velocity import Velocity
-from box import Box
-from line import Line
-import shapely
-from shapely.geometry import Point, LineString
 
 pygame.font.init()
 myFont = pygame.font.SysFont("Times New Roman", 18)
@@ -96,7 +93,7 @@ class Robot:
             start = self.position.to_tuple_with_movement(
                 self.size * t_x, self.size * t_y
             )
-            if math.sqrt((start[0] - p.x) ** 2 + (start[1] - p.y) ** 2) > 100:
+            if sqrt((start[0] - p.x) ** 2 + (start[1] - p.y) ** 2) > 100:
                 p.x, p.y = p_max.x, p_max.y
 
             pygame.draw.line(
@@ -106,9 +103,7 @@ class Robot:
                 (p.x, p.y),
             )
 
-            sensor_value = round(
-                math.sqrt((start[0] - p.x) ** 2 + (start[1] - p.y) ** 2)
-            )
+            sensor_value = round(sqrt((start[0] - p.x) ** 2 + (start[1] - p.y) ** 2))
             sensor_display = myFont.render(str(sensor_value), True, (0, 0, 0))
             self.screen.blit(
                 sensor_display,
@@ -119,9 +114,9 @@ class Robot:
             )
 
     def update_position(self, lines: list[Line]):
-        result = self._calc_update()
-        x, y, direction = result
-        velocity = self._calc_velocity(*self.position.to_tuple(), x, y)
+        x, y, direction = self._calc_update()
+
+        velocity = self._calc_velocity(x, y)
 
         for line in lines:
             if line.distance_to(Position(x, y)) < self.size:
@@ -132,6 +127,7 @@ class Robot:
 
                 # Source: https://matthew-brett.github.io/teaching/rotation_2d.html
                 # Image showing the x and y delta of the velocity parallel to the wall
+
                 alpha = line.radians()
                 beta = self.direction - alpha
                 q = sin(beta) * delta_line.len()
@@ -141,7 +137,7 @@ class Robot:
                 x += u
                 y -= t
 
-        self._set_position(x, y, direction)
+        self.set_position(x, y, direction)
         self._update_sensors()
 
     def _calc_update(self):
@@ -149,15 +145,15 @@ class Robot:
             return self._calc_straight_update()
         return self._calc_circle_update()
 
-    def _calc_velocity(self, x1, y1, x2, y2):
-        if x2 == x1 and y2 == y1:
+    def _calc_velocity(self, x, y):
+        if x == self.position.x and y == self.position.y:
             return Line(
-                x1,
-                y1,
-                x1 + cos(self.direction),
-                y1 + sin(self.direction),
+                self.position.x,
+                self.position.y,
+                self.position.x + cos(self.direction),
+                self.position.y + sin(self.direction),
             )
-        return Line(x1, y1, x2, y2)
+        return Line(self.position.x, self.position.y, x, y)
 
     def _calc_straight_update(self) -> tuple[float, float, float]:
         x = self.position.x + self.speed.left * cos(self.direction)
@@ -208,10 +204,11 @@ class Robot:
             / (self.speed.left - self.speed.right)
         )
 
-    def _set_position(self, x, y, direction):
+    def set_position(self, x: float, y: float, direction: float | None = None):
         self.position.x = x
         self.position.y = y
-        self.direction = direction
+        if direction is not None:
+            self.direction = direction
 
     def _update_sensors(self):
         for s in self.sensors:
