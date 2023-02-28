@@ -36,10 +36,10 @@ box.draw(screen)
 robby.draw(box.lines())
 
 pygame.display.update()
-line = Line(box_x1, box_y1, box_x2 / 2, box_y2 / 2)
-line2 = Line(box_x2 * 3 / 4, box_y2, box_x2, box_y1)
+# line = Line(box_x1, box_y1, box_x2 / 2, box_y2 / 2)
+# line2 = Line(box_x2 * 3 / 4, box_y2, box_x2, box_y1)
 
-map = [line2, line] + box.lines()
+map = box.lines()
 
 pushed = [False in range(6)]
 o_pushed = False
@@ -107,6 +107,6 @@ while running:
     robby.draw(map)
     box.draw(screen)
 
-    pygame.draw.line(screen, (0, 0, 0), *line.to_tuple())
-    pygame.draw.line(screen, (0, 0, 0), *line2.to_tuple())
+    # pygame.draw.line(screen, (0, 0, 0), *line.to_tuple())
+    # pygame.draw.line(screen, (0, 0, 0), *line2.to_tuple())
     pygame.display.update()
