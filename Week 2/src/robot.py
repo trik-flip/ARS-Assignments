@@ -119,7 +119,7 @@ class Robot:
         velocity = self._calc_velocity(x, y)
 
         for line in lines:
-            if line.distance_to(Position(x, y)) < self.size:
+            if line.distance_to(Position(x, y)) <= self.size:
                 collision_point = velocity.intersect_point_with_radius(line, self.size)
 
                 remaining_update = Position(x, y) - collision_point
@@ -134,11 +134,25 @@ class Robot:
                 u = sin(alpha) * q
                 t = cos(alpha) * q
 
-                x += u
-                y -= t
+                x += u * 1.1
+                y -= t * 1.1
 
-        self.set_position(x, y, direction)
-        self._update_sensors()
+        collision_line = Line(*self.position.to_tuple(), x, y)
+        update = True
+
+        for line in lines:
+            if (
+                collision_line.does_intersect(line)
+                or line.distance_to(Position(x, y)) <= self.size
+            ):
+                update = False
+
+        if self.speed.left == -self.speed.right:
+            update = True
+
+        if update:
+            self.set_position(x, y, direction)
+            self._update_sensors()
 
     def _calc_update(self):
         if self.speed.is_straight():
