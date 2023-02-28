@@ -22,10 +22,16 @@ box_x2 = 1700
 box_y1 = 200
 box_y2 = 880
 
-box_x21 = 200 + 150
-box_x22 = 1700 - 150
-box_y21 = 200 + 150
-box_y22 = 880 - 150
+point1 = 350, 350
+point2 = 350, 880 - 150
+point3 = 1700 - 150, 880 - 150
+line1 = Line(350, 351, *point2)
+line2 = Line(351, 880 - 150, *point3)
+line3 = Line(*point1, *point3)
+# box_x21 = 200 + 150
+# box_x22 = 1700 - 150
+# box_y21 = 200 + 150
+# box_y22 = 880 - 150
 
 background = WHITE
 running = True
@@ -38,16 +44,16 @@ screen.fill(background)
 robby = Robot(screen, direction=0)
 robby.set_position(240, 240)
 box = Box(box_x1, box_y1, box_x2, box_y2)
-box2 = Box(box_x21, box_y21, box_x22, box_y22)
+# box2 = Box(box_x21, box_y21, box_x22, box_y22)
 box.draw(screen)
-box2.draw(screen)
-robby.draw(box.lines() + box2.lines())
+# box2.draw(screen)
+robby.draw(box.lines() + [line1, line2, line3])
 
 pygame.display.update()
 # line = Line(box_x1, box_y1, box_x2 / 2, box_y2 / 2)
 # line2 = Line(box_x2 * 3 / 4, box_y2, box_x2, box_y1)
 
-map = box.lines() + box2.lines()
+map = box.lines() + [line1, line2, line3]
 
 pushed = [False in range(6)]
 o_pushed = False
@@ -114,8 +120,12 @@ while running:
     robby.update_position(map)
     robby.draw(map)
     box.draw(screen)
-    box2.draw(screen)
 
+    # box2.draw(screen)
+
+    pygame.draw.line(screen, (0, 0, 0), *line1.to_tuple())
+    pygame.draw.line(screen, (0, 0, 0), *line2.to_tuple())
+    pygame.draw.line(screen, (0, 0, 0), *line3.to_tuple())
     # pygame.draw.line(screen, (0, 0, 0), *line.to_tuple())
     # pygame.draw.line(screen, (0, 0, 0), *line2.to_tuple())
     pygame.display.update()
