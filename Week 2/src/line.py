@@ -1,6 +1,5 @@
-from exceptions import WrongClassException
 from position import Position
-from math import atan, sin, cos
+from math import atan, cos
 from functools import cache
 
 

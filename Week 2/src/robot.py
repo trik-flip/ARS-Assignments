@@ -133,9 +133,13 @@ class Robot:
                 q = sin(beta) * delta_line.len()
                 u = sin(alpha) * q
                 t = cos(alpha) * q
-
-                x += u
-                y -= t
+                swap = self.speed.left + self.speed.right < 0
+                if not swap:
+                    x += u
+                    y -= t
+                else:
+                    x -= u
+                    y += t
 
         collision_line = Line(*self.position.to_tuple(), x, y)
         update = True
@@ -143,7 +147,7 @@ class Robot:
         for line in lines:
             if (
                 collision_line.does_intersect(line)
-                or line.distance_to(Position(x, y)) < self.size * 0.8
+                or line.distance_to(Position(x, y)) <= self.size
             ) and not collision_line.len() < 1e10:
                 update = False
 

@@ -22,6 +22,11 @@ box_x2 = 1700
 box_y1 = 200
 box_y2 = 880
 
+box_x21 = 200 + 150
+box_x22 = 1700 - 150
+box_y21 = 200 + 150
+box_y22 = 880 - 150
+
 background = WHITE
 running = True
 pygame.init()
@@ -31,15 +36,18 @@ pygame.display.set_caption("Robby Sim")
 screen.fill(background)
 
 robby = Robot(screen, direction=0)
+robby.set_position(240, 240)
 box = Box(box_x1, box_y1, box_x2, box_y2)
+box2 = Box(box_x21, box_y21, box_x22, box_y22)
 box.draw(screen)
-robby.draw(box.lines())
+box2.draw(screen)
+robby.draw(box.lines() + box2.lines())
 
 pygame.display.update()
 # line = Line(box_x1, box_y1, box_x2 / 2, box_y2 / 2)
 # line2 = Line(box_x2 * 3 / 4, box_y2, box_x2, box_y1)
 
-map = box.lines()
+map = box.lines() + box2.lines()
 
 pushed = [False in range(6)]
 o_pushed = False
@@ -90,11 +98,11 @@ while running:
     g_pushed = key_event[pygame.K_g]
 
     if key_event[pygame.K_r]:
-        robby.position.x = 1920 / 2
-        robby.position.y = 1080 / 2
+        robby.position.x = 240
+        robby.position.y = 240
         robby.speed.left = 0
         robby.speed.right = 0
-        robby.direction = pi
+        robby.direction = 0
 
     if key_event[pygame.K_x]:
         robby.speed.left = 0
@@ -106,6 +114,7 @@ while running:
     robby.update_position(map)
     robby.draw(map)
     box.draw(screen)
+    box2.draw(screen)
 
     # pygame.draw.line(screen, (0, 0, 0), *line.to_tuple())
     # pygame.draw.line(screen, (0, 0, 0), *line2.to_tuple())
