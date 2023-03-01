@@ -148,7 +148,7 @@ class Robot:
             if (
                 collision_line.does_intersect(line)
                 or line.distance_to(Position(x, y)) <= self.size
-            ) and not collision_line.len() < 1e10:
+            ) and collision_line.len() <= 1e-10:
                 update = False
 
         if self.speed.left == -self.speed.right:

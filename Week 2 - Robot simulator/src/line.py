@@ -189,4 +189,8 @@ class Line:
     def point_in_range_of_line(self, p):
         max_x = max(self.end.x, self.start.x)
         min_x = min(self.start.x, self.end.x)
-        return p.x <= max_x and min_x <= p.x
+
+        max_y = max(self.end.y, self.start.y)
+        min_y = min(self.start.y, self.end.y)
+
+        return (min_x <= p.x and p.x <= max_x) and (min_y <= p.y and p.y <= max_y)

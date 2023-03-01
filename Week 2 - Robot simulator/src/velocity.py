@@ -7,7 +7,7 @@ class Velocity:
     right: float
 
     def is_straight(self):
-        return self.left == self.right
+        return round(self.left, 1) == round(self.right, 1)
 
     def __eq__(self, __o: object) -> bool:
         assert isinstance(__o, Velocity)
