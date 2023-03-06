@@ -1,9 +1,6 @@
-from math import pi
-
 import pygame
-
-from line import Line
 from box import Box
+from line import Line
 from robot import Robot
 
 WHITE = (255, 255, 255)
@@ -12,26 +9,21 @@ GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 BLACK = (0, 0, 0)
 
-
-(width, height) = (1900, 1060)
 STEP_SIZE = 0.1
 
 
-box_x1 = 200
-box_x2 = 1700
-box_y1 = 200
-box_y2 = 880
+(width, height) = (1900, 1060)
+
+
+box1 = 200, 1700, 200, 880
 
 point1 = 350, 350
 point2 = 350, 880 - 150
 point3 = 1700 - 150, 880 - 150
+
 line1 = Line(350, 351, *point2)
 line2 = Line(351, 880 - 150, *point3)
 line3 = Line(*point1, *point3)
-# box_x21 = 200 + 150
-# box_x22 = 1700 - 150
-# box_y21 = 200 + 150
-# box_y22 = 880 - 150
 
 background = WHITE
 running = True
@@ -43,17 +35,16 @@ screen.fill(background)
 
 robby = Robot(screen, direction=0)
 robby.set_position(240, 240)
-box = Box(box_x1, box_y1, box_x2, box_y2)
-# box2 = Box(box_x21, box_y21, box_x22, box_y22)
+box = Box(*box1)
 box.draw(screen)
-# box2.draw(screen)
-robby.draw(box.lines() + [line1, line2, line3])
-
-pygame.display.update()
-# line = Line(box_x1, box_y1, box_x2 / 2, box_y2 / 2)
-# line2 = Line(box_x2 * 3 / 4, box_y2, box_x2, box_y1)
 
 map = box.lines() + [line1, line2, line3]
+robby.draw(map)
+
+pygame.display.update()
+
+dt = 0
+dt_last = 0
 
 pushed = [False in range(6)]
 o_pushed = False
@@ -68,7 +59,6 @@ while running:
     ev = pygame.event.get()
     for event in ev:
         if event.type == pygame.MOUSEBUTTONDOWN:
-            # Possible to use something like "last_pos = pygame.mouse.get_pos()"
             x, y = pygame.mouse.get_pos()
             robby.set_position(x, y)
         if event.type == pygame.QUIT:
@@ -121,11 +111,7 @@ while running:
     robby.draw(map)
     box.draw(screen)
 
-    # box2.draw(screen)
-
     pygame.draw.line(screen, (0, 0, 0), *line1.to_tuple())
     pygame.draw.line(screen, (0, 0, 0), *line2.to_tuple())
     pygame.draw.line(screen, (0, 0, 0), *line3.to_tuple())
-    # pygame.draw.line(screen, (0, 0, 0), *line.to_tuple())
-    # pygame.draw.line(screen, (0, 0, 0), *line2.to_tuple())
     pygame.display.update()

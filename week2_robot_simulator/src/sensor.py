@@ -53,7 +53,7 @@ class Sensor:
 
         if l_g == float("inf") or abs(l_g) > 1e15:
             x = line.start.x
-            y = self._y_axis_intersect() + x * s_g
+            y = self.__y_axis_intersect() + x * s_g
             return Position(x, y)
 
         if s_g == float("inf") or abs(s_g) > 1e15:
@@ -62,11 +62,11 @@ class Sensor:
             return Position(x, y)
 
         if l_g == s_g:
-            if line.y_axis_intersect() == self._y_axis_intersect():
+            if line.y_axis_intersect() == self.__y_axis_intersect():
                 return self.position
             return None
 
-        y1 = self._y_axis_intersect()
+        y1 = self.__y_axis_intersect()
         x = (line.y_axis_intersect() - y1) / (s_g - l_g)
         y = self.gradient() * x + y1
         return Position(x, y)
@@ -74,5 +74,5 @@ class Sensor:
     def gradient(self):
         return tan(self.direction)
 
-    def _y_axis_intersect(self):
+    def __y_axis_intersect(self):
         return self.position.y - self.position.x * self.gradient()

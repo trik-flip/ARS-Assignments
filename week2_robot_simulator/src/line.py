@@ -19,7 +19,7 @@ class Line:
             if min_y <= point.y <= max_y:
                 return abs(self.start.x - point.x)
             else:
-                return self._point_distance_to(point)
+                return self.__point_distance_to(point)
 
         if abs(self.gradient()) < 1e-2:
             min_x = min(self.start.x, self.end.x)
@@ -27,14 +27,14 @@ class Line:
             if min_x <= point.x <= max_x:
                 return abs(self.start.y - point.y)
             else:
-                return self._point_distance_to(point)
+                return self.__point_distance_to(point)
 
-        if self._in_perpendicular_range(point):
-            return self._perpendicular_distance_to(point)
+        if self.__in_perpendicular_range(point):
+            return self.__perpendicular_distance_to(point)
         else:
-            return self._point_distance_to(point)
+            return self.__point_distance_to(point)
 
-    def _perpendicular_distance_to(self, point: Position):
+    def __perpendicular_distance_to(self, point: Position):
         # Determine the shortest line
 
         max_x = max(self.start.x, self.end.x, point.x)
@@ -47,12 +47,12 @@ class Line:
         # return distance to intersection point
         return point.distance_to(xp)
 
-    def _point_distance_to(self, point):
+    def __point_distance_to(self, point):
         p1_distance = self.start.distance_to(point)
         p2_distance = self.end.distance_to(point)
         return min(p1_distance, p2_distance)
 
-    def _in_perpendicular_range(self, point: Position):
+    def __in_perpendicular_range(self, point: Position):
         y = point.y_axis_intersect(self.perpendicular_gradient())
 
         y1 = self.start.y_axis_intersect(self.perpendicular_gradient())

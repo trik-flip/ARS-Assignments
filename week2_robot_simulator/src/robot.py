@@ -114,9 +114,9 @@ class Robot:
             )
 
     def update_position(self, lines: list[Line]):
-        x, y, direction = self._calc_update()
+        x, y, direction = self.__calc_update()
 
-        velocity = self._calc_velocity(x, y)
+        velocity = self.__calc_velocity(x, y)
 
         for line in lines:
             if line.distance_to(Position(x, y)) <= self.size:
@@ -156,14 +156,14 @@ class Robot:
 
         if update:
             self.set_position(x, y, direction)
-            self._update_sensors()
+            self.__update_sensors()
 
-    def _calc_update(self):
+    def __calc_update(self):
         if self.speed.is_straight():
-            return self._calc_straight_update()
-        return self._calc_circle_update()
+            return self.__calc_straight_update()
+        return self.__calc_circle_update()
 
-    def _calc_velocity(self, x, y):
+    def __calc_velocity(self, x, y):
         if x == self.position.x and y == self.position.y:
             return Line(
                 self.position.x,
@@ -173,27 +173,27 @@ class Robot:
             )
         return Line(self.position.x, self.position.y, x, y)
 
-    def _calc_straight_update(self) -> tuple[float, float, float]:
+    def __calc_straight_update(self) -> tuple[float, float, float]:
         x = self.position.x + self.speed.left * cos(self.direction)
         y = self.position.y + self.speed.left * sin(self.direction)
         return x, y, self.direction
 
-    def _calc_circle_update(self) -> tuple[float, float, float]:
-        w = self._calc_w()
-        R = self._calc_r()
-        ICC = self._calc_icc(R)
+    def __calc_circle_update(self) -> tuple[float, float, float]:
+        w = self.__calc_w()
+        R = self.__calc_r()
+        ICC = self.__calc_icc(R)
 
-        a = self._calc_a(w)
-        b = self._calc_b(ICC)
-        c = self._calc_c(w, ICC)
+        a = self.__calc_a(w)
+        b = self.__calc_b(ICC)
+        c = self.__calc_c(w, ICC)
 
         result = a.dot(b) + c
         return result[0][0], result[1][0], result[2][0]
 
-    def _calc_c(self, w, icc: list[float]):
+    def __calc_c(self, w, icc: list[float]):
         return np.array([[icc[0]], [icc[1]], [w]])
 
-    def _calc_b(self, icc: list[float]):
+    def __calc_b(self, icc: list[float]):
         return np.array(
             [
                 [self.position.x - icc[0]],
@@ -202,19 +202,19 @@ class Robot:
             ]
         )
 
-    def _calc_a(self, w):
+    def __calc_a(self, w):
         return np.array([[cos(w), -sin(w), 0], [sin(w), cos(w), 0], [0, 0, 1]])
 
-    def _calc_icc(self, r: float):
+    def __calc_icc(self, r: float):
         return [
             self.position.x - r * sin(self.direction),
             self.position.y + r * cos(self.direction),
         ]
 
-    def _calc_w(self):
+    def __calc_w(self):
         return (self.speed.left - self.speed.right) / 20
 
-    def _calc_r(self):
+    def __calc_r(self):
         return (
             20
             / 2
@@ -228,7 +228,7 @@ class Robot:
         if direction is not None:
             self.direction = direction
 
-    def _update_sensors(self):
+    def __update_sensors(self):
         for s in self.sensors:
             s.direction = self.direction + s.offset
             s.position = self.position
