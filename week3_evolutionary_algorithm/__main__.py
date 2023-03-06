@@ -138,8 +138,8 @@ benchmark = rosenbrock
 
 ea = EvolutionaryAlgorithm(population_size=20, input=0, output=2)
 x_and_ys = [p.run() for p in ea.population]
-
-# region benchmark plot
+fitnesshistory=[]
+#region benchmark plot
 min_x, max_x = -1.8, 1.8
 min_y, max_y = -1, 3
 x = np.linspace(min_x, max_x, 300)
@@ -147,16 +147,22 @@ y = np.linspace(min_y, max_y, 300)
 x, y = np.meshgrid(x, y)
 z = benchmark(x, y)
 fig = plt.figure()
-ax1 = fig.add_subplot(1, 2, 1, projection="3d")
+ax1 = fig.add_subplot(2, 2, 1, projection="3d")
+ax2 = fig.add_subplot(
+    2,
+    1,
+    2,
+)
+
 ls = LightSource(500, 90)
 surf = ax1.plot_surface(
     x, y, z, cmap=cm.jet, edgecolor="black", linewidth=0.02, zorder=-1, alpha=0.1
 )
-# endregion
+#endregion
 
-# region plot particles based on the EA initialisation
-particles_x = [coord[0] for coord in x_and_ys]
-particles_y = [coord[1] for coord in x_and_ys]
+#region plot particles based on the EA initialisation
+particles_x=[coord[0] for coord in x_and_ys]
+particles_y=[coord[1] for coord in x_and_ys]
 particles = np.array([ele for ele in x_and_ys])
 
 scatter = ax1.scatter(
@@ -167,9 +173,10 @@ scatter = ax1.scatter(
     linewidths=0,
     label="scatter",
 )
-# endregion
+fitnesshistory.append(min([benchmark(x, y) for x, y in particles]))
+#endregion
 
-
+(points,) = ax2.plot([0], fitnesshistory)
 plt.draw()
 plt.waitforbuttonpress()
 
@@ -179,8 +186,13 @@ unchanged = 0
 epoch = 0
 
 
+benchmark = rosenbrock
 while unchanged < 100:
     epoch += 1
+    ax1.set_title(f"Organism evolution Gen:{epoch}")
+    ax2.set_xlim(0, epoch + 2)
+    ax2.set_ylim(0, max(fitnesshistory) * 1.1)
+
     ea.epoch((), benchmark)
     ea.selection()
     ea.repopulation()
@@ -189,10 +201,13 @@ while unchanged < 100:
     result = org.run()
 
     x_and_ys = [p.run() for p in ea.population]
-    scatter.set_offsets([(x, y) for x, y in x_and_ys])
+    particles = np.array([ele for ele in x_and_ys])
+    fitnesshistory.append(min([benchmark(x, y) for x, y in particles]))
+    scatter.set_offsets([ele for ele in x_and_ys])
     scatter.set_3d_properties([benchmark(x, y) for x, y in x_and_ys], "z")
+    points.set_data([x for x in range(epoch + 1)], fitnesshistory)
     plt.draw()
-    plt.pause(0.1)
+    plt.pause(0.01)
 
     print(epoch, result, benchmark(*result))
     if best > benchmark(*result):
