@@ -8,6 +8,7 @@ class Sensor:
     position: Position
     offset: float
     direction: float
+    value: float
 
     def __init__(self, x, y, direction) -> None:
         self.position = Position(x, y)

@@ -104,6 +104,7 @@ class Robot:
             )
 
             sensor_value = round(sqrt((start[0] - p.x) ** 2 + (start[1] - p.y) ** 2))
+            sensor.value = sensor_value
             sensor_display = myFont.render(str(sensor_value), True, (0, 0, 0))
             self.screen.blit(
                 sensor_display,

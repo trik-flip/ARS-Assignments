@@ -15,8 +15,6 @@ STEP_SIZE = 0.1
 (width, height) = (1900, 1060)
 
 
-box1 = 200, 1700, 200, 880
-
 point1 = 350, 350
 point2 = 350, 880 - 150
 point3 = 1700 - 150, 880 - 150
@@ -35,11 +33,11 @@ screen.fill(background)
 
 robby = Robot(screen, direction=0)
 robby.set_position(240, 240)
-box = Box(*box1)
+box = Box(200, 200, 1700, 880)
 box.draw(screen)
 
+robby.draw(box.lines() + [line1, line2, line3])
 map = box.lines() + [line1, line2, line3]
-robby.draw(map)
 
 pygame.display.update()
 
@@ -107,9 +105,9 @@ while running:
     if key_event[pygame.K_ESCAPE]:
         running = False
 
+    box.draw(screen)
     robby.update_position(map)
     robby.draw(map)
-    box.draw(screen)
 
     pygame.draw.line(screen, (0, 0, 0), *line1.to_tuple())
     pygame.draw.line(screen, (0, 0, 0), *line2.to_tuple())
