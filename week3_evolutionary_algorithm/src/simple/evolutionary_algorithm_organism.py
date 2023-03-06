@@ -42,10 +42,13 @@ class EvolutionaryAlgorithmOrganism:
         assert isinstance(ea2, EvolutionaryAlgorithmOrganism)
         baby = self.off_spring()
 
-        if np.random.random() > 0.5:
-            self.__cross_over_single_weight(ea2, baby)
-        else:
-            self.__cross_over_whole_weight(ea2, baby)
+        self.__cross_over_single_weight(ea2, baby)
+
+        # This could be helpfull in bigger networks, but not when there is only one layer
+        # if np.random.random() > 0.5:
+        #     self.__cross_over_single_weight(ea2, baby)
+        # else:
+        #     self.__cross_over_whole_weight(ea2, baby)
 
         return baby
 
@@ -55,10 +58,11 @@ class EvolutionaryAlgorithmOrganism:
 
         for i, w in enumerate(baby.weights):
             for j, _w in enumerate(baby.weights[i]):
-                if np.random.random() > 0.5:
-                    baby.weights[i][j] = np.array(self.weights[i][j])
-                else:
-                    baby.weights[i][j] = np.array(ea2.weights[i][j])
+                for ij, _ in enumerate(baby.weights[i][j]):
+                    if np.random.random() > 0.5:
+                        baby.weights[i][j][ij] = np.array(self.weights[i][j][ij])
+                    else:
+                        baby.weights[i][j][ij] = np.array(ea2.weights[i][j][ij])
 
     def __cross_over_whole_weight(self, ea2, baby):
         assert isinstance(ea2, EvolutionaryAlgorithmOrganism)
@@ -85,10 +89,13 @@ class EvolutionaryAlgorithmOrganism:
 
         return baby
 
-    def mutate(self, k=1.0):
+    def mutate(self, k):
         for i, w in enumerate(self.weights):
             for j, n in enumerate(w):
-                self.weights[i][j] = (self.weights[i][j] + np.random.random() - 0.5) * k
+                for ij, _ in enumerate(n):
+                    self.weights[i][j][ij] = (
+                        self.weights[i][j][ij] + np.random.random() - 0.5
+                    ) * k
 
     def __eq__(self, o: object) -> bool:
         assert isinstance(o, EvolutionaryAlgorithmOrganism)
