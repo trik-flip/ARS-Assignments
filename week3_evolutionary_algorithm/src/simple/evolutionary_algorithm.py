@@ -1,6 +1,7 @@
-import numpy as np
 from math import exp
 from random import sample
+
+from .evolutionary_algorithm_organism import EvolutionaryAlgorithmOrganism
 
 
 def sigmoid(x):
@@ -8,86 +9,60 @@ def sigmoid(x):
     return ex / (ex + 1)
 
 
-class EvolutionaryAlgorithmOrganism:
-    def __init__(self, *, input: int, hidden: list[int] = [], output: int) -> None:
-        assert output is not None
-        self.input = np.zeros(input + 1)
-        self.input[-1] = 1
-        self.hidden = [np.zeros(n + 1) for n in hidden]
-        for l in self.hidden:
-            l[-1] = 1
-        self.output = np.zeros(output)
-
-        self.network = [self.input, *self.hidden, self.output]
-        self.weights = []
-
-        for i, layer in enumerate(self.network[:-1]):
-            self.weights.append(np.random.rand(len(layer), len(self.network[i + 1])))
-
-    def run(self, *input_data):
-        assert len(input_data) == len(self.input) - 1
-        for i, val in enumerate(input_data):
-            self.input[i] = val
-        self.input[-1] = 1
-        for i, layer in enumerate(self.network[:-1]):
-            self.network[i + 1] = layer.dot(self.weights[i])
-        self.output = self.network[-1]
-        return self.output
-
-    def cross(self, ea2):
-        assert isinstance(ea2, EvolutionaryAlgorithmOrganism)
-        baby = EvolutionaryAlgorithmOrganism(
-            input=len(self.input) - 1, output=len(self.output)
-        )
-        for i, w in enumerate(baby.weights):
-            if np.random.random() > 0.5:
-                new_weight = self.weights[i]
-            else:
-                new_weight = ea2.weights[i]
-
-            for j, _w in enumerate(new_weight):
-                baby.weights[i][j] = _w
-
-        return baby
-
-    def mutate(self):
-        for i, w in enumerate(self.weights):
-            for j, n in enumerate(w):
-                self.weights[i][j] = self.weights[i][j] + np.random.random() - 0.5
-
-
 class EvolutionaryAlgorithm:
     new_population: list[EvolutionaryAlgorithmOrganism]
     population: list[EvolutionaryAlgorithmOrganism]
     fitness: list[float]
     population_size: int
+    survival_rate: float
+    best_organism: EvolutionaryAlgorithmOrganism
+    best_fitness: float
+    org_fit_list: list[tuple[EvolutionaryAlgorithmOrganism, float]]
 
     def __init__(
-        self, population_size, *, input: int, hidden: list[int] = [], output: int
+        self,
+        population_size,
+        survival_rate=0.2,
+        *,
+        input: int,
+        hidden: list[int] = [],
+        output: int,
     ) -> None:
         self.population_size = population_size
+        self.survival_rate = survival_rate
         self.population = [
             EvolutionaryAlgorithmOrganism(input=input, hidden=hidden, output=output)
             for _ in range(population_size)
         ]
+        self.best_organism = self.population[0]
+        self.best_fitness = float("inf")
+        self.not_in_timer = 0
 
     def epoch(self, input, bench):
-        self.fitness = []
-        for ea in self.population:
-            z = ea.run(*input)
-            distance = bench(*z)
-            self.fitness.append(distance)
+        self.org_fit_list = [(ea, bench(*ea.run(*input))) for ea in self.population]
+        self.fitness = self.__calc_fitness(input, bench)
+        self.__update_global_best()
+
+    def __calc_fitness(self, input, bench):
+        return [bench(*ea.run(*input)) for ea in self.population]
 
     def repopulation(self):
-        self._breed()
-        self._mutate()
+        self.__breed()
+        self.__mutate()
         self.population += self.new_population
+        if self.not_in_timer > 5 and self.best_organism not in self.population:
+            print("adding")
+            self.__add_best_again()
+        self.not_in_timer += self.best_organism not in self.population
 
-    def _mutate(self):
+    def __add_best_again(self, x=1):
+        self.population[-x:] = [self.best_organism.copy() for _ in range(x)]
+
+    def __mutate(self):
         for p in self.population:
             p.mutate()
 
-    def _breed(self):
+    def __breed(self):
         self.new_population = []
         while len(self.new_population) < (self.population_size - len(self.population)):
             x, y = sample(self.population, 2)
@@ -95,25 +70,20 @@ class EvolutionaryAlgorithm:
             self.new_population.append(b)
 
     def best(self, x=1):
-        samples_and_fitness = zip(self.population, self.fitness)
-        return [
-            ea
-            for ea, _ in sorted(
-                samples_and_fitness,
-                key=lambda x: x[1],
-            )[:x]
-        ]
+        sorted_best = self.__sorted_population_fitness_list()[:x]
+        return [ea for ea, _ in sorted_best]
 
-    def selection(self, survival_rate=0.2):
-        samples_and_fitness = [(x, y) for x, y in zip(self.population, self.fitness)]
-        best_samples = sorted(
-            samples_and_fitness,
-            key=lambda x: x[1],
-        )[: int(self.population_size * survival_rate)]
+    def __update_global_best(self):
+        ea, fitness = sorted(self.org_fit_list, key=lambda x: x[1])[0]
+        if fitness < self.best_fitness:
+            self.best_organism = ea.copy()
+            self.best_fitness = fitness
 
-        self.population = [ea for ea, _ in best_samples]
+    def selection(self):
+        self.population = self.best(int(self.population_size * self.survival_rate))
 
+    def __population_fitness_list(self):
+        return list(zip(self.population, self.fitness))
 
-pop = [EvolutionaryAlgorithmOrganism(input=2, output=1) for _ in range(20)]
-input = 3, 5
-output = sum(input)
+    def __sorted_population_fitness_list(self):
+        return sorted(self.__population_fitness_list(), key=lambda x: x[1])
