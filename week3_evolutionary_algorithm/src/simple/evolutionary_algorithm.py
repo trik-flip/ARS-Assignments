@@ -58,9 +58,9 @@ class EvolutionaryAlgorithm:
     def __add_best_again(self, x=1):
         self.population[-x:] = [self.best_organism.copy() for _ in range(x)]
 
-    def __mutate(self):
+    def __mutate(self,k=1.0):
         for p in self.population:
-            p.mutate()
+            p.mutate(k)
 
     def __breed(self):
         self.new_population = []

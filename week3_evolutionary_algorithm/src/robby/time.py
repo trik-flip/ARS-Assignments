@@ -1,4 +1,5 @@
 import pygame
+
 BLACK = (255,255,255)
 
 class Time:

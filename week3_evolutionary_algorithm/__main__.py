@@ -3,12 +3,12 @@ import numpy as np
 import pygame
 from matplotlib import cm
 from matplotlib.colors import LightSource
-
-from .src.benchmarks import rastrigin, rosenbrock
-from .src.robby.box import Box
-from .src.robby.line import Line
-from .src.robby.robot import Robot
-from .src.simple.evolutionary_algorithm import EvolutionaryAlgorithm, sigmoid
+from src.benchmarks.rastrigin import rastrigin
+from src.benchmarks.rosenbrock import rosenbrock
+from src.robby.box import Box
+from src.robby.line import Line
+from src.robby.robot import Robot
+from src.simple.evolutionary_algorithm import EvolutionaryAlgorithm, sigmoid
 
 WHITE = (255, 255, 255)
 BLUE = (0, 0, 255)

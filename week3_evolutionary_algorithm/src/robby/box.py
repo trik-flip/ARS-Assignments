@@ -1,5 +1,5 @@
-from .line import Line
 import pygame
+from .line import Line
 from pygame.surface import Surface
 
 

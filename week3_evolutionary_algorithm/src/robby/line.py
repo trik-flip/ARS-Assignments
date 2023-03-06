@@ -1,6 +1,7 @@
-from .position import Position
-from math import atan, cos
 from functools import cache
+from math import atan, cos
+
+from .position import Position
 
 
 class Line:
