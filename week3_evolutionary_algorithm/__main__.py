@@ -184,7 +184,6 @@ while unchanged < 100:
     ea.epoch((), benchmark)
     ea.selection()
     ea.repopulation()
-
     (org,) = ea.best()
     result = org.run()
 
@@ -194,7 +193,7 @@ while unchanged < 100:
     plt.draw()
     plt.pause(0.1)
 
-    print(epoch, result, benchmark(*result))
+    print(f"[{epoch}] - {ea.diversity():.3f}, {result}, {benchmark(*result):.6f}")
     if best > benchmark(*result):
         unchanged = 0
         best = benchmark(*result)

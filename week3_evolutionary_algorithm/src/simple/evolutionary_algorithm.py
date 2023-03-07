@@ -58,7 +58,7 @@ class EvolutionaryAlgorithm:
     def __add_best_again(self, x=1):
         self.population[-x:] = [self.best_organism.copy() for _ in range(x)]
 
-    def __mutate(self,k=1.0):
+    def __mutate(self, k=1.0):
         for p in self.population:
             p.mutate(k)
 
@@ -68,6 +68,13 @@ class EvolutionaryAlgorithm:
             x, y = sample(self.population, 2)
             b = x.cross(y)
             self.new_population.append(b)
+
+    def diversity(self):
+        total = 0
+        for i, p in enumerate(self.population):
+            for o in self.population[i:]:
+                total += p.difference(o)
+        return total
 
     def best(self, x=1):
         sorted_best = self.__sorted_population_fitness_list()[:x]

@@ -64,6 +64,16 @@ class EvolutionaryAlgorithmOrganism:
                     else:
                         baby.weights[i][j][ij] = np.array(ea2.weights[i][j][ij])
 
+    def difference(self, o):
+        assert isinstance(o, EvolutionaryAlgorithmOrganism)
+        diff = 0.0
+        for i, w in enumerate(o.weights):
+            for j, _w in enumerate(o.weights[i]):
+                for ij, _ in enumerate(o.weights[i][j]):
+                    diff += abs(self.weights[i][j][ij] - o.weights[i][j][ij])
+
+        return diff
+
     def __cross_over_whole_weight(self, ea2, baby):
         assert isinstance(ea2, EvolutionaryAlgorithmOrganism)
         assert isinstance(baby, EvolutionaryAlgorithmOrganism)
