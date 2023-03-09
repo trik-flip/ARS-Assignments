@@ -8,7 +8,7 @@ from src.benchmarks.rosenbrock import rosenbrock
 from src.robby.box import Box
 from src.robby.line import Line
 from src.robby.robot import Robot
-from src.simple.evolutionary_algorithm import EvolutionaryAlgorithm, sigmoid
+from src.simple.evolutionary_algorithm import EvolutionaryAlgorithm
 
 WHITE = (255, 255, 255)
 BLUE = (0, 0, 255)
@@ -195,8 +195,7 @@ while unchanged < 100:
 
     ea.epoch((), benchmark)
     ea.selection()
-    ea.repopulation()
-
+    ea.repopulate()
     (org,) = ea.best()
     result = org.run()
 
@@ -209,7 +208,7 @@ while unchanged < 100:
     plt.draw()
     plt.pause(0.01)
 
-    print(epoch, result, benchmark(*result))
+    print(f"[{epoch}] - {ea.diversity():.3f}, {result}, {benchmark(*result):.6f}")
     if best > benchmark(*result):
         unchanged = 0
         best = benchmark(*result)
