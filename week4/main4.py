@@ -2,7 +2,7 @@ import random
 from math import exp
 from matplotlib import pyplot as plt
 from numpy import average
-
+import numpy as np
 import pygame
 from fitness import fitness
 from src.robby.box import Box
@@ -20,6 +20,7 @@ def sigmoid(x):
     return (1 / (1 + exp(-x))) * 2 - 1
 
 
+np.random.seed(42)
 random.seed(42)
 
 WHITE = (255, 255, 255)
@@ -40,10 +41,8 @@ def game_loop(
     for robot in robots:
         robot.set_position(240, 240)
         robot.draw(all_lines)
-    for i in range(3):
-        robots[i].draw_slime()
-    for i in range(3):
-        robots[i].draw(all_lines)
+
+    draw_on_screen(robots, all_lines)
 
     frame_count: int = 0
     running: bool = True
@@ -85,14 +84,21 @@ def game_loop(
                 running = False
 
             robot.update_position(all_lines)
-        for i in range(3):
-            robots[i].draw_slime()
-        for i in range(3):
-            robots[i].draw(all_lines)
-
+        draw_on_screen(robots, all_lines)
         for line in all_lines:
             pygame.draw.line(screen, BLACK, *line.to_tuple())
         pygame.display.update()
+    screen.fill(RED)
+    pygame.display.update()
+
+
+def draw_on_screen(robots: list[Robot], all_lines):
+    robs = robots
+    # robs = list(sorted(robots, key=lambda x: x.area_covered(), reverse=True))
+    for robot in robs[:3]:
+        robot.draw_slime()
+    for robot in robs[:3]:
+        robot.draw(all_lines)
 
 
 def main(load_from_file=False):
@@ -131,15 +137,21 @@ def main(load_from_file=False):
             hidden=[10, 6],
             output=2,
             recur=-2,
-            mutation_rate=0.0,
+            mutation_chance=0,
         )
 
     robots = [Robot(screen, direction=0) for _ in ea.population]
 
-    while ea.no_better_counter < 5:
+    while ea.generation_count < 4:
         game_loop(ea.population, robots, 1500, screen, game_map)
-        print(f"[{ea.generation_count}] - {ea.diversity():.3f}, {ea.best_fitness}")
-        ea.epoch(robots, fitness.fitfunc)
+        screen.fill(RED)
+        pygame.display.update()
+
+        ea.epoch(robots, fitness.calc)
+
+        print(
+            f"[{ea.generation_count}] - [{ea.diversity():5.0f}] - [{ea.best_fitness:.1f}]"
+        )
         avg = average(ea.fitness)
         best = min(ea.fitness)
 
@@ -153,17 +165,17 @@ def main(load_from_file=False):
         robots = [Robot(screen, direction=0) for _ in ea.population]
         if ea.generation_count % 5 == 0:
             ea.save(f"ea-{ea.generation_count}-intermediate.obj")
+
+    plt.title = "Final result"
     plt.plot(avg_fitness_over_time)
-    plt.title("avg_fitness_over_time")
-    plt.show()
+    plt.legend("avg_fitness_over_time")
     plt.plot(best_fitness_over_time)
-    plt.title("best_fitness_over_time")
-    plt.show()
+    plt.legend("best_fitness_over_time")
     plt.plot(diversity_over_time)
-    plt.title("diversity_over_time")
+    plt.legend("diversity_over_time")
     plt.show()
 
     ea.save(f"ea-{ea.generation_count}.obj")
 
     print("trained")
-    game_loop(ea.sorted_population(), robots, 20000000, screen, game_map)
+    game_loop(ea.best(), robots[:1], 20000000, screen, game_map)
