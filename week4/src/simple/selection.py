@@ -6,7 +6,7 @@ PopAndFitnessType = list[tuple[EvolutionaryAlgorithmOrganism, float]]
 EAOListType = list[EvolutionaryAlgorithmOrganism]
 
 
-def roulette_wheel_selection(population: PopAndFitnessType, size) -> EAOListType:
+def roulette_wheel_selection(population: PopAndFitnessType, size: int) -> EAOListType:
     new_pop: EAOListType = []
     fitness = [f for _, f in population]
     max_fitness = max(fitness) + 1
@@ -32,7 +32,9 @@ def roulette_wheel_selection(population: PopAndFitnessType, size) -> EAOListType
     return new_pop
 
 
-def unique_roulette_wheel_selection(population: PopAndFitnessType, size) -> EAOListType:
+def unique_roulette_wheel_selection(
+    population: PopAndFitnessType, size: int
+) -> EAOListType:
     new_pop: list[EvolutionaryAlgorithmOrganism] = []
     fitness = [f for _, f in population]
     max_fitness = max(fitness) + 1
@@ -59,17 +61,17 @@ def unique_roulette_wheel_selection(population: PopAndFitnessType, size) -> EAOL
     return list(new_pop)
 
 
-def elitist_selection(population: PopAndFitnessType, size) -> EAOListType:
+def elitist_selection(population: PopAndFitnessType, size: int) -> EAOListType:
     return [ea for ea, _ in sorted(population, key=lambda x: x[1])[:size]]
 
 
-def rank_selection(population: PopAndFitnessType, size) -> EAOListType:
+def rank_selection(population: PopAndFitnessType, size: int) -> EAOListType:
     # https://en.wikipedia.org/wiki/Selection_(genetic_algorithm)#Rank_Selection
     pass
 
 
 def tournament_selection(
-    population: PopAndFitnessType, size, K=10, p=0.6
+    population: PopAndFitnessType, size: int, K=10, p=0.6
 ) -> EAOListType:
     # https://en.wikipedia.org/wiki/Selection_(genetic_algorithm)#Tournament_Selection
     new_pop = []

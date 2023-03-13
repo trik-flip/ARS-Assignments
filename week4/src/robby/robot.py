@@ -10,7 +10,7 @@ from .sensor import Sensor
 from .velocity import Velocity
 
 pygame.font.init()
-myFont = pygame.font.SysFont("Times New Roman", 18)
+MY_FONT = pygame.font.SysFont("Times New Roman", 18)
 
 
 class Robot:
@@ -23,7 +23,6 @@ class Robot:
         speed=(0, 0),
         direction=0.0,
         sensors=12,
-        box_tuple=Box(200, 200, 1700, 880),
     ) -> None:
         self.to_draw = []
         self.position = Position(*position)
@@ -36,7 +35,6 @@ class Robot:
             Sensor(*self.position.to_tuple(), (pi * 2 / sensors) * i)
             for i in range(sensors)
         ]
-        self.box_tuple = box_tuple
         self.collision_count = 0
         self.history = []
         self.speed_history = []
@@ -50,7 +48,6 @@ class Robot:
     screen: Surface
     size: float
     color: tuple[int, int, int]
-    box_tuple = tuple[int, int, int, int]
 
     def draw(self, lines=[]):
         pygame.draw.circle(self.screen, self.color, self.position.to_tuple(), self.size)
@@ -63,8 +60,10 @@ class Robot:
             self.position.to_tuple(),
             self.position.to_tuple_with_movement(t_x * self.size, t_y * self.size),
         )
-        speed_label1 = myFont.render(str(round(self.speed.left * 10)), True, (0, 0, 0))
-        speed_label2 = myFont.render(str(round(self.speed.right * 10)), True, (0, 0, 0))
+        speed_label1 = MY_FONT.render(str(round(self.speed.left * 10)), True, (0, 0, 0))
+        speed_label2 = MY_FONT.render(
+            str(round(self.speed.right * 10)), True, (0, 0, 0)
+        )
         self.screen.blit(
             speed_label1,
             self.position.to_tuple_with_movement(
@@ -90,9 +89,10 @@ class Robot:
                         p = temp_p
             if p is None:
                 continue
-            times_radius = 10
+            times_radius = 5
             x, y = self.position.to_tuple_with_movement(
-                self.size * times_radius * t_x, self.size * times_radius * t_y
+                self.size * (times_radius + 1) * t_x,
+                self.size * (times_radius + 1) * t_y,
             )
 
             p_max = Position(x, y)
@@ -100,7 +100,7 @@ class Robot:
                 self.size * t_x, self.size * t_y
             )
             if sqrt((start[0] - p.x) ** 2 + (start[1] - p.y) ** 2) > (
-                (times_radius - 1) * self.size
+                (times_radius) * self.size
             ):
                 p.x, p.y = p_max.x, p_max.y
 
@@ -113,7 +113,7 @@ class Robot:
 
             sensor_value = round(sqrt((start[0] - p.x) ** 2 + (start[1] - p.y) ** 2))
             sensor.value = sensor_value
-            sensor_display = myFont.render(str(sensor_value), True, (0, 0, 0))
+            sensor_display = MY_FONT.render(str(sensor_value), True, (0, 0, 0))
             self.screen.blit(
                 sensor_display,
                 self.position.to_tuple_with_movement(
@@ -125,22 +125,37 @@ class Robot:
             drawing()
         self.to_draw = []
 
+    def area_covered(self):
+        if len(self.history) == 0:
+            return 0
+        been_here = [self.history[0]]
+        for pos in self.history:
+            add = True
+            x1, y1 = pos
+            for recorded_pos in been_here:
+                x2, y2 = recorded_pos
+                if ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** (1 / 2) < self.size:
+                    add = False
+            if add:
+                been_here.append(pos)
+        return len(been_here)
+
     def draw_slime(self):
         for x, y in self.history:
             circle = pygame.Surface((self.size * 2, self.size * 2), pygame.SRCALPHA)
             pygame.draw.circle(
-                circle, (58, 131, 52, 255), (self.size, self.size), self.size
+                circle, (28, 130, 249, 5), (self.size, self.size), self.size
             )
             x, y = x - (self.size), y - (self.size)
             self.screen.blit(circle, (x, y))
 
     def update_position(self, lines: list[Line]):
         x, y, direction = self.__calc_update()
-        if self.current_pose(x, y, direction):
+        if self.is_current_pose(x, y, direction):
             self.history.append((x, y))
             return
+
         velocity = self.__calc_velocity(x, y)
-        # for line in sorted(lines, key=lambda l: velocity.intersects(l)):
         for wall in lines + list(reversed(lines)):
             if round(
                 wall.distance_to(new_pos := Position(x, y)), 4
@@ -161,13 +176,10 @@ class Robot:
                 y -= y_speed
                 velocity = self.__calc_velocity(x, y)
 
-        if self.current_pose(x, y, direction):
+        if self.is_current_pose(x, y, direction):
             self.history.append((x, y))
             return
 
-        # for wall in lines:
-        #     if wall.distance_to(Position(x, y)) < self.size:
-        #         print("hitting")
         new_pos = lambda: pygame.draw.line(
             self.screen, (0, 255, 0), *(velocity * 10).to_tuple()
         )
@@ -191,7 +203,7 @@ class Robot:
         t = cos(alpha) * q
         return u, t
 
-    def current_pose(self, x, y, direction):
+    def is_current_pose(self, x, y, direction):
         return (
             x == self.position.x
             and y == self.position.y
