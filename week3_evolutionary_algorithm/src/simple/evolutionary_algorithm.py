@@ -1,9 +1,18 @@
+from math import exp
+from random import sample
+import numpy as np
 from random import random, sample
 
 from .evolutionary_algorithm_organism import EvolutionaryAlgorithmOrganism
 
 
+def sigmoid(x):
+    ex = exp(x)
+    return ex / (ex + 1)
+
+
 class EvolutionaryAlgorithm:
+    new_population: list[EvolutionaryAlgorithmOrganism]
     population: list[EvolutionaryAlgorithmOrganism]
     fitness: list[float]
     population_size: int

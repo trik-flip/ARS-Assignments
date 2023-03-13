@@ -37,8 +37,11 @@ class Robot:
             for i in range(sensors)
         ]
         self.box_tuple = box_tuple
+        self.collision_count=0
+        self.history = []
 
     to_draw: list
+    history :list[tuple[float,float]]
     sensors: list[Sensor]
     position: Position
     speed: Velocity
@@ -87,15 +90,16 @@ class Robot:
                         p = temp_p
             if p is None:
                 continue
+            times_radius = 10
             x, y = self.position.to_tuple_with_movement(
-                self.size * 6 * t_x, self.size * 6 * t_y
+                self.size * times_radius * t_x, self.size * times_radius * t_y
             )
 
             p_max = Position(x, y)
             start = self.position.to_tuple_with_movement(
                 self.size * t_x, self.size * t_y
             )
-            if sqrt((start[0] - p.x) ** 2 + (start[1] - p.y) ** 2) > 100:
+            if sqrt((start[0] - p.x) ** 2 + (start[1] - p.y) ** 2) > ((times_radius - 1)*self.size):
                 p.x, p.y = p_max.x, p_max.y
 
             pygame.draw.line(
@@ -122,13 +126,13 @@ class Robot:
     def update_position(self, lines: list[Line]):
         x, y, direction = self.__calc_update()
         if self.current_pose(x, y, direction):
+            self.history.append((x,y))
             return
         velocity = self.__calc_velocity(x, y)
         # for line in sorted(lines, key=lambda l: velocity.intersects(l)):
-        for wall in lines:
-            if wall.distance_to(new_pos := Position(x, y)) <= (
-                self.size
-            ) or velocity.intersects(wall):
+        for wall in lines + list(reversed(lines)):
+            if round(wall.distance_to(new_pos := Position(x, y)),4) < self.size or velocity.intersects(wall):
+                self.collision_count+=1
                 collision_point = velocity.intersect_point_with_radius(wall, self.size)
                 remaining_update = new_pos - collision_point
 
@@ -143,14 +147,14 @@ class Robot:
                 x += x_speed
                 y -= y_speed
                 velocity = self.__calc_velocity(x, y)
-                print(velocity)
 
         if self.current_pose(x, y, direction):
+            self.history.append((x,y))
             return
 
-        for wall in lines:
-            if wall.distance_to(Position(x, y)) < self.size:
-                print("hitting")
+        # for wall in lines:
+        #     if wall.distance_to(Position(x, y)) < self.size:
+        #         print("hitting")
         new_pos = lambda: pygame.draw.line(
             self.screen, (0, 255, 0), *(velocity * 10).to_tuple()
         )
@@ -158,6 +162,7 @@ class Robot:
         if not any(map(lambda l: l.intersects(velocity), lines)):
             self.set_position(x, y, direction)
             self.__update_sensors()
+        self.history.append((x,y))
 
     def account_for_backwards_driving(self, u, t):
         driving_backwards = self.speed.left + self.speed.right < 0

@@ -4,10 +4,32 @@ import numpy as np
 
 class EvolutionaryAlgorithmOrganism:
     def __init__(
-        self, *, input: int, hidden: list[int] = [], output: int, scaler: float = 1.0
+        self,
+        *,
+        input: int,
+        hidden: list[int] = [],
+        output: int,
+        scaler: float = 1.0,
+        recur: None | int = None,
     ) -> None:
-        self.input = np.zeros(input + 1)
+        if recur is not None:
+            match recur:
+                case -1:
+                    size_of_recur_layer = output
+                case x if abs(x) >= len(hidden) + 2:
+                    raise Exception(f"{x} is not a valid value")
+                case x if x < 0:
+                    size_of_recur_layer = hidden[x + 1]
+                case x if x > 0:
+                    size_of_recur_layer = hidden[x - 1]
+                case x:
+                    raise Exception(f"{x} is not a valid value")
+            self.size_of_recur_layer = size_of_recur_layer
+            self.input = np.zeros(input + 1 + size_of_recur_layer)
+        else:
+            self.input = np.zeros(input + 1)
         self.input[-1] = 1
+        self.recur = recur
         self.hidden = [np.zeros(n + 1) for n in hidden]
         for l in self.hidden:
             l[-1] = 1
@@ -27,6 +49,12 @@ class EvolutionaryAlgorithmOrganism:
         )
 
     def run(self, *input_data: float):
+        if self.recur is not None:
+            if self.recur == -1:
+                input_data = input_data + tuple(self.network[self.recur])
+            else:
+                input_data = input_data + tuple(self.network[self.recur][:-1])
+
         assert len(input_data) == len(self.input) - 1
 
         for i, val in enumerate(input_data):
@@ -54,11 +82,11 @@ class EvolutionaryAlgorithmOrganism:
         assert isinstance(ea2, EvolutionaryAlgorithmOrganism)
         assert isinstance(baby, EvolutionaryAlgorithmOrganism)
 
-        for i, w in enumerate(baby.weights):
-            for j, _w in enumerate(baby.weights[i]):
-                for ij, _ in enumerate(baby.weights[i][j]):
+        for i, w in enumerate(self.weights):
+            for j, _w in enumerate(w):
+                for ij, __w in enumerate(_w):
                     if np.random.random() > change:
-                        baby.weights[i][j][ij] = np.array(self.weights[i][j][ij])
+                        baby.weights[i][j][ij] = np.array(__w)
                     else:
                         baby.weights[i][j][ij] = np.array(ea2.weights[i][j][ij])
 
@@ -83,18 +111,22 @@ class EvolutionaryAlgorithmOrganism:
                 baby.weights[i] = ea2.weights[i]
 
     def off_spring(self):
+        input_length = len(self.input)
+        if self.recur is not None:
+            input_length -= [len(n) for n in self.network][self.recur]
+        else:
+            input_length -= 1
         return EvolutionaryAlgorithmOrganism(
-            input=len(self.input) - 1,
+            input=input_length,
             hidden=[len(w) - 1 for w in self.hidden],
             output=len(self.output),
+            recur=self.recur,
         )
 
     def copy(self):
         baby = self.off_spring()
-        for i, w in enumerate(baby.weights):
-            # for j, _w in enumerate(baby.weights[i]):
-            #     baby.weights[i][j] = np.array(self.weights[i][j])
-            baby.weights[i] = np.array(self.weights[i])
+        for i, w in enumerate(self.weights):
+            baby.weights[i] = np.array(w)
 
         return baby
 
@@ -109,8 +141,12 @@ class EvolutionaryAlgorithmOrganism:
 
     def __eq__(self, o: object) -> bool:
         assert isinstance(o, EvolutionaryAlgorithmOrganism)
-        for i, w in enumerate(self.weights):
-            for j, _w in enumerate(w):
-                if any(self.weights[i][j] != o.weights[i][j]):
+        for sw, ow in zip(self.weights, o.weights):
+            for _sw, _ow in zip(sw, ow):
+                if any(_sw != _ow):
                     return False
+        # for i, w in enumerate(self.weights):
+        #     for j, _w in enumerate(w):
+        #         if any(_w != o.weights[i][j]):
+        #             return False
         return True

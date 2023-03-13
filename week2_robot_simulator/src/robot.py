@@ -120,7 +120,8 @@ class Robot:
         velocity = self.__calc_velocity(x, y)
 
         for line in lines:
-            if line.distance_to(Position(x, y)) <= self.size:
+            if line.distance_to(Position(x, y)) <= self.size or velocity.does_intersect(line):
+
                 collision_point = velocity.intersect_point_with_radius(line, self.size)
 
                 remaining_update = Position(x, y) - collision_point

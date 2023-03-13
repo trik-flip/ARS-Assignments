@@ -1,7 +1,7 @@
 from random import random, sample
 
 from .evolutionary_algorithm_organism import EvolutionaryAlgorithmOrganism
-from .selection import elitist_selection
+from .selection import tournament_selection
 
 
 class EvolutionaryAlgorithm:
@@ -11,6 +11,7 @@ class EvolutionaryAlgorithm:
     survival_rate: float
     best_organism: EvolutionaryAlgorithmOrganism
     best_fitness: float
+    generation_count: int
     org_fit_list: list[tuple[EvolutionaryAlgorithmOrganism, float]]
 
     def __init__(
@@ -21,29 +22,37 @@ class EvolutionaryAlgorithm:
         input: int,
         hidden: list[int] = [],
         output: int,
+        recur: int | None = None
     ) -> None:
+        self.no_better_counter = 0
+        self.generation_count = 0
         self.population_size = population_size
         self.survival_rate = survival_rate
         self.population = [
-            EvolutionaryAlgorithmOrganism(input=input, hidden=hidden, output=output)
+            EvolutionaryAlgorithmOrganism(
+                input=input, hidden=hidden, output=output, recur=recur
+            )
             for _ in range(population_size)
         ]
         self.best_organism = self.population[0]
         self.best_fitness = float("inf")
         self.not_in_timer = 0
 
-    def epoch(self, input, bench):
-        self.org_fit_list = [(ea, bench(*ea.run(*input))) for ea in self.population]
-        self.fitness = self.__calc_fitness(input, bench)
+    def epoch(self, input_robots, bench):
+        self.org_fit_list = [
+            (ea, bench(input_robots[i])) for i, ea in enumerate(self.population)
+        ]
+        self.fitness = self.__calc_fitness(input_robots, bench)
         self.__update_global_best()
 
-    def __calc_fitness(self, input: tuple[float, ...], bench):
-        return [bench(*ea.run(*input)) for ea in self.population]
+    def __calc_fitness(self, input_robots, bench):
+        return [bench(input_robots[i]) for i, _ in enumerate(self.population)]
 
     def repopulate(self, timer=5):
         new_p = breed(self.population_size, self.population)
         mutate(self.population)
         self.population += new_p
+        self.generation_count += 1
 
         if self.not_in_timer > timer and self.best_organism not in self.population:
             self.__add_best_again()
@@ -65,10 +74,13 @@ class EvolutionaryAlgorithm:
         if fitness < self.best_fitness:
             self.best_organism = ea.copy()
             self.best_fitness = fitness
+            self.no_better_counter = 0
+        else:
+            self.no_better_counter += 1
 
     def selection(self):
         size = int(self.population_size * self.survival_rate)
-        self.population = elitist_selection(self.__population_fitness_list(), size)
+        self.population = tournament_selection(self.__population_fitness_list(), size)
 
     def __population_fitness_list(
         self,
