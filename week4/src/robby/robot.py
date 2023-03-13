@@ -75,7 +75,6 @@ class Robot:
             speed_label2,
             self.position.to_tuple_with_movement(t_x - 0.3 * self.size, t_y),
         )
-
         for sensor in self.sensors:
             t_x = cos(sensor.direction)
             t_y = sin(sensor.direction)
@@ -125,6 +124,15 @@ class Robot:
         for drawing in self.to_draw:
             drawing()
         self.to_draw = []
+
+    def draw_slime(self):
+        for x, y in self.history:
+            circle = pygame.Surface((self.size * 2, self.size * 2), pygame.SRCALPHA)
+            pygame.draw.circle(
+                circle, (58, 131, 52, 255), (self.size, self.size), self.size
+            )
+            x, y = x - (self.size), y - (self.size)
+            self.screen.blit(circle, (x, y))
 
     def update_position(self, lines: list[Line]):
         x, y, direction = self.__calc_update()

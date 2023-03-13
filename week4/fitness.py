@@ -5,16 +5,8 @@ from src.robby.robot import Robot
 class fitness:
     @staticmethod
     def fitfunc(robot: Robot):
-        """
-        - [x] # of collisions
-        - [x] area covered
-        - [x] Average speed
-        - [x] distance form starting point
-        """
-
         avg = average(robot.speed_history)
         y = (((avg - 6) ** 2) * 5) - 100
-
         area_covered = 0
         been_here = [robot.history[0]]
         for pos in robot.history:
@@ -26,7 +18,8 @@ class fitness:
             [fitness._moved(*robot.history[0], *pos) for pos in robot.history]
         )
         collisions = robot.collision_count
-        return -(max_distance * 3 - area_covered * 1) + (collisions * 100) + y
+
+        return -(max_distance / 100 - area_covered * 5) + (collisions) + y * 50
 
     @staticmethod
     def _moved(x, y, x2, y2):

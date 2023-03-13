@@ -1,7 +1,10 @@
+import pickle
 from random import random, sample
 
 from .evolutionary_algorithm_organism import EvolutionaryAlgorithmOrganism
-from .selection import tournament_selection
+from .selection import (
+    elitist_selection,
+)
 
 
 class EvolutionaryAlgorithm:
@@ -14,6 +17,13 @@ class EvolutionaryAlgorithm:
     generation_count: int
     org_fit_list: list[tuple[EvolutionaryAlgorithmOrganism, float]]
 
+    @staticmethod
+    def load(filename: str):
+        with open(filename, "rb") as f:
+            ea = pickle.load(f)
+        assert isinstance(ea, EvolutionaryAlgorithm)
+        return ea
+
     def __init__(
         self,
         population_size=20,
@@ -22,8 +32,13 @@ class EvolutionaryAlgorithm:
         input: int,
         hidden: list[int] = [],
         output: int,
-        recur: int | None = None
+        recur: int | None = None,
+        mutation_rate: float = 1,
+        mutation_chance: float = 1
     ) -> None:
+        self.mutation_rate = mutation_rate
+        self.mutation_chance = mutation_chance
+
         self.no_better_counter = 0
         self.generation_count = 0
         self.population_size = population_size
@@ -38,6 +53,10 @@ class EvolutionaryAlgorithm:
         self.best_fitness = float("inf")
         self.not_in_timer = 0
 
+    def save(self, filename):
+        with open(filename, "wb") as f:
+            pickle.dump(self, f)
+
     def epoch(self, input_robots, bench):
         self.org_fit_list = [
             (ea, bench(input_robots[i])) for i, ea in enumerate(self.population)
@@ -50,7 +69,7 @@ class EvolutionaryAlgorithm:
 
     def repopulate(self, timer=5):
         new_p = breed(self.population_size, self.population)
-        mutate(self.population)
+        mutate(self.population, self.mutation_rate, self.mutation_chance)
         self.population += new_p
         self.generation_count += 1
 
@@ -80,12 +99,19 @@ class EvolutionaryAlgorithm:
 
     def selection(self):
         size = int(self.population_size * self.survival_rate)
-        self.population = tournament_selection(self.__population_fitness_list(), size)
+        self.population = elitist_selection(self.__population_fitness_list(), size)
 
     def __population_fitness_list(
         self,
     ) -> list[tuple[EvolutionaryAlgorithmOrganism, float]]:
         return list(zip(self.population, self.fitness))
+
+    def sorted_population(
+        self,
+    ) -> list[EvolutionaryAlgorithmOrganism]:
+        return [
+            ea for ea, _ in sorted(self.__population_fitness_list(), key=lambda x: x[1])
+        ]
 
     def __sorted_population_fitness_list(
         self,

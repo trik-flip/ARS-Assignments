@@ -1,6 +1,7 @@
-import pickle
 import random
 from math import exp
+from matplotlib import pyplot as plt
+from numpy import average
 
 import pygame
 from fitness import fitness
@@ -39,6 +40,10 @@ def game_loop(
     for robot in robots:
         robot.set_position(240, 240)
         robot.draw(all_lines)
+    for i in range(3):
+        robots[i].draw_slime()
+    for i in range(3):
+        robots[i].draw(all_lines)
 
     frame_count: int = 0
     running: bool = True
@@ -80,13 +85,20 @@ def game_loop(
                 running = False
 
             robot.update_position(all_lines)
-            robot.draw(all_lines)
+        for i in range(3):
+            robots[i].draw_slime()
+        for i in range(3):
+            robots[i].draw(all_lines)
+
         for line in all_lines:
             pygame.draw.line(screen, BLACK, *line.to_tuple())
         pygame.display.update()
 
 
 def main(load_from_file=False):
+    avg_fitness_over_time = []
+    best_fitness_over_time = []
+    diversity_over_time = []
     (width, height) = (1920, 1080)
 
     point1 = 350, 350
@@ -110,24 +122,48 @@ def main(load_from_file=False):
     pygame.display.update()
 
     if load_from_file:
-        with open(f"ea.obj", "rb") as f:
-            ea = pickle.load(f)
+        ea = EvolutionaryAlgorithm.load("ea.obj")
     else:
         ea = EvolutionaryAlgorithm(
-            population_size=50, input=12, hidden=[10, 6], output=2, recur=-2
+            survival_rate=0.5,
+            population_size=12,
+            input=12,
+            hidden=[10, 6],
+            output=2,
+            recur=-2,
+            mutation_rate=0.0,
         )
 
     robots = [Robot(screen, direction=0) for _ in ea.population]
 
     while ea.no_better_counter < 5:
         game_loop(ea.population, robots, 1500, screen, game_map)
-
         print(f"[{ea.generation_count}] - {ea.diversity():.3f}, {ea.best_fitness}")
         ea.epoch(robots, fitness.fitfunc)
+        avg = average(ea.fitness)
+        best = min(ea.fitness)
+
+        avg_fitness_over_time.append(avg)
+        best_fitness_over_time.append(best)
+        diversity_over_time.append(ea.diversity())
+
         ea.selection()
         ea.repopulate()
+
         robots = [Robot(screen, direction=0) for _ in ea.population]
-    with open(f"ea-{ea.generation_count}.obj", "wb") as f:
-        pickle.dump(ea, f)
+        if ea.generation_count % 5 == 0:
+            ea.save(f"ea-{ea.generation_count}-intermediate.obj")
+    plt.plot(avg_fitness_over_time)
+    plt.title("avg_fitness_over_time")
+    plt.show()
+    plt.plot(best_fitness_over_time)
+    plt.title("best_fitness_over_time")
+    plt.show()
+    plt.plot(diversity_over_time)
+    plt.title("diversity_over_time")
+    plt.show()
+
+    ea.save(f"ea-{ea.generation_count}.obj")
+
     print("trained")
-    game_loop(ea.population, robots, 20000000, screen, game_map)
+    game_loop(ea.sorted_population(), robots, 20000000, screen, game_map)
