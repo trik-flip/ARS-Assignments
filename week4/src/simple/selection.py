@@ -98,5 +98,18 @@ def tournament_selection(
     return list(new_pop)
 
 
-def diversity_selection(population: PopAndFitnessType, size) -> EAOListType:
-    pass
+def diversity_selection(population: PopAndFitnessType, size: int) -> EAOListType:
+    total_set = set([p for p, _ in population])
+    selected_set = set()
+    most_diverse = None
+    diversity_score = float("-inf")
+    while len(selected_set) < size:
+        for ea in total_set:
+            score = sum([ea.difference(o) for o, _ in population])
+            if score > diversity_score:
+                most_diverse = ea
+                diversity_score = score
+        assert most_diverse is not None, f"{most_diverse} shouldn't be None"
+        total_set.remove(most_diverse)
+        selected_set.add(most_diverse)
+    return list(selected_set)
