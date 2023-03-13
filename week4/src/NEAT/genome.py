@@ -72,7 +72,6 @@ class Genome:
     # connectivity.  If r is True then recurrent connections will
     # be included.
     @staticmethod
-    # TODO
     def create_special(
         new_id: int, i: int, o: int, n: int, nmax: int, r: bool, linkprob: float
     ):
@@ -185,7 +184,6 @@ class Genome:
         return G
 
     @staticmethod
-    # TODO
     def create_3_possible_types(num_in: int, num_out: int, num_hidden: int, type: int):
         G = Genome()
         inputs: list[NNode] = []

@@ -1,19 +1,21 @@
-import random
 import pickle
+import random
+from math import exp
+
 import pygame
+from fitness import fitness
 from src.robby.box import Box
 from src.robby.line import Line
 from src.robby.robot import Robot
 from src.simple.evolutionary_algorithm import EvolutionaryAlgorithm
-from math import exp
-from fitness import fitness
+from src.simple.evolutionary_algorithm_organism import EvolutionaryAlgorithmOrganism
 
 
 def sigmoid(x):
     if x < -100:
-        return 1
+        return 1.0
     elif x > 100:
-        return -1
+        return -1.0
     return (1 / (1 + exp(-x))) * 2 - 1
 
 
@@ -27,60 +29,72 @@ BLACK = (0, 0, 0)
 STEP_SIZE = 0.01
 
 
-def game_loop(running, ea, robbies, timer: int, screen, all_lines: list[Line]):
-    for r in robbies:
-        r.set_position(240, 240)
-        r.draw(all_lines)
-    frame_count = 0
+def game_loop(
+    organisms: list[EvolutionaryAlgorithmOrganism],
+    robots: list[Robot],
+    timer: int,
+    screen,
+    all_lines: list[Line],
+):
+    for robot in robots:
+        robot.set_position(240, 240)
+        robot.draw(all_lines)
+
+    frame_count: int = 0
+    running: bool = True
+
     while running:
         frame_count += 1
+
         if frame_count > timer:
             running = False
+
         screen.fill(WHITE)
         ev = pygame.event.get()
         for event in ev:
             if event.type == pygame.QUIT:
                 running = False
-        for i, e in enumerate(ea):
-            result = e.run(*[s.value for s in robbies[i].sensors])
-            result = list(map(sigmoid, result))
-            if result[0] > 0.5:
-                robbies[i].speed.right += STEP_SIZE
-            elif result[0] < -0.5:
-                robbies[i].speed.right -= STEP_SIZE
 
-            if result[1] > 0.5:
-                robbies[i].speed.left += STEP_SIZE
-            elif result[1] < -0.5:
-                robbies[i].speed.left -= STEP_SIZE
+        for org, robot in zip(organisms, robots):
+            result = org.run(*[s.value for s in robot.sensors])
+            right, left = list(map(sigmoid, result))
+            if right > 0.5:
+                robot.speed.right += STEP_SIZE
+            elif right < -0.5:
+                robot.speed.right -= STEP_SIZE
+
+            if left > 0.5:
+                robot.speed.left += STEP_SIZE
+            elif left < -0.5:
+                robot.speed.left -= STEP_SIZE
 
             key_event = pygame.key.get_pressed()
             if key_event[pygame.K_r]:
-                robbies[i].position.x = 240
-                robbies[i].position.y = 240
-                robbies[i].speed.left = 0
-                robbies[i].speed.right = 0
-                robbies[i].direction = 0
+                robot.position.x = 240
+                robot.position.y = 240
+                robot.speed.left = 0
+                robot.speed.right = 0
+                robot.direction = 0
 
             if key_event[pygame.K_ESCAPE]:
                 running = False
 
-            robbies[i].update_position(all_lines)
-            robbies[i].draw(all_lines)
+            robot.update_position(all_lines)
+            robot.draw(all_lines)
         for line in all_lines:
             pygame.draw.line(screen, BLACK, *line.to_tuple())
         pygame.display.update()
 
 
 def main(load_from_file=False):
-    (width, height) = (1900, 1060)
+    (width, height) = (1920, 1080)
 
     point1 = 350, 350
     point2 = 350, 880 - 150
     point3 = 1700 - 150, 880 - 150
 
-    line1 = Line(350, 350, *point2)
-    line2 = Line(350, 880 - 150, *point3)
+    line1 = Line(*point1, *point2)
+    line2 = Line(*point2, *point3)
     line3 = Line(*point1, *point3)
 
     pygame.init()
@@ -103,17 +117,17 @@ def main(load_from_file=False):
             population_size=50, input=12, hidden=[10, 6], output=2, recur=-2
         )
 
-    robbies = [Robot(screen, direction=0) for _ in ea.population]
+    robots = [Robot(screen, direction=0) for _ in ea.population]
 
     while ea.no_better_counter < 5:
-        game_loop(True, ea.population, robbies, 1500, screen, game_map)
+        game_loop(ea.population, robots, 1500, screen, game_map)
 
         print(f"[{ea.generation_count}] - {ea.diversity():.3f}, {ea.best_fitness}")
-        ea.epoch(robbies, fitness.fitfunc)
+        ea.epoch(robots, fitness.fitfunc)
         ea.selection()
         ea.repopulate()
-        robbies = [Robot(screen, direction=0) for _ in ea.population]
+        robots = [Robot(screen, direction=0) for _ in ea.population]
     with open(f"ea-{ea.generation_count}.obj", "wb") as f:
         pickle.dump(ea, f)
     print("trained")
-    game_loop(True, ea.population, robbies, 20000000, screen, game_map)
+    game_loop(ea.population, robots, 20000000, screen, game_map)

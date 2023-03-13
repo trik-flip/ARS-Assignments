@@ -1,3 +1,6 @@
+from typing import Any
+
+
 class Velocity:
     def __init__(self, left=0, right=0) -> None:
         self.left = left
@@ -5,6 +8,9 @@ class Velocity:
 
     left: float
     right: float
+
+    def __call__(self, *args: Any, **kwds: Any) -> Any:
+        return self.left, self.right
 
     def is_straight(self):
         return round(self.left, 1) == round(self.right, 1)

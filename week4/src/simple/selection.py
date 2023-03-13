@@ -1,4 +1,5 @@
 from random import random, sample
+
 from .evolutionary_algorithm_organism import EvolutionaryAlgorithmOrganism
 
 PopAndFitnessType = list[tuple[EvolutionaryAlgorithmOrganism, float]]
@@ -98,5 +99,4 @@ def tournament_selection(
 
 
 def diversity_selection(population: PopAndFitnessType, size) -> EAOListType:
-    # TODO: rank based on fitness and diversity
     pass

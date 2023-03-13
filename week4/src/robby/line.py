@@ -142,8 +142,6 @@ class Line:
         # get gradient of line
         delta = r / cos(line.radians())
 
-        # TODO(step 2): move line in the perpendicular direction with r
-
         if line < self:
             new_l.start.y += delta
             new_l.end.y += delta
@@ -152,7 +150,6 @@ class Line:
             new_l.start.y -= delta
             new_l.end.y -= delta
 
-        # TODO(step 3): calc new intersection_point
         p = self.strict_intersect_point(new_l)
         return p
 
@@ -182,8 +179,6 @@ class Line:
         # get gradient of line
         delta = r / cos(line.radians())
 
-        # TODO(step 2): move line in the perpendicular direction with r
-
         if line < self:
             new_l.start.y += delta
             new_l.end.y += delta
@@ -192,7 +187,6 @@ class Line:
             new_l.start.y -= delta
             new_l.end.y -= delta
 
-        # TODO(step 3): calc new intersection_point
         p = self.intersect_point(new_l)
         return p
 
