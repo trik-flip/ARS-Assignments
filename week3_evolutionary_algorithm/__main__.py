@@ -133,24 +133,29 @@ STEP_SIZE = 0.1
 # print(res, benchmark(*res))
 
 
-benchmark = rosenbrock
+benchmark = rastrigin
+if benchmark == rastrigin:
+    min_x, max_x = -5.12, 5.12
+    min_y, max_y = -5.12, 5.12
+elif benchmark == rosenbrock:
+    min_x, max_x = -1.8, 1.8
+    min_y, max_y = -1, 3
 
-
-ea = EvolutionaryAlgorithm(population_size=20, input=0, output=2)
+ea = EvolutionaryAlgorithm(population_size=40, input=0,hidden=[2,2], output=2)
 x_and_ys = [p.run() for p in ea.population]
 fitnesshistory=[]
 #region benchmark plot
-min_x, max_x = -1.8, 1.8
-min_y, max_y = -1, 3
+# min_x, max_x = -1.8, 1.8
+# min_y, max_y = -1, 3
 x = np.linspace(min_x, max_x, 300)
 y = np.linspace(min_y, max_y, 300)
 x, y = np.meshgrid(x, y)
 z = benchmark(x, y)
 fig = plt.figure()
-ax1 = fig.add_subplot(2, 2, 1, projection="3d")
+ax1 = fig.add_subplot(1,2, 1, projection="3d")
 ax2 = fig.add_subplot(
-    2,
     1,
+    2,
     2,
 )
 
@@ -186,8 +191,7 @@ unchanged = 0
 epoch = 0
 
 
-benchmark = rosenbrock
-while unchanged < 100:
+while unchanged < 75:
     epoch += 1
     ax1.set_title(f"Organism evolution Gen:{epoch}")
     ax2.set_xlim(0, epoch + 2)

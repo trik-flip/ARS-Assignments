@@ -19,8 +19,8 @@ point1 = 350, 350
 point2 = 350, 880 - 150
 point3 = 1700 - 150, 880 - 150
 
-line1 = Line(350, 351, *point2)
-line2 = Line(351, 880 - 150, *point3)
+line1 = Line(350, 350, *point2)
+line2 = Line(350, 880 - 150, *point3)
 line3 = Line(*point1, *point3)
 
 background = WHITE
