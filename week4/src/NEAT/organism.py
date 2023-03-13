@@ -1,132 +1,74 @@
-from functools import cache
-from node import Node
-from connection import Connection
+from species import Species
+from genome import Genome
+from network import Network
 
 
 class Organism:
-    nodes: list[Node]
-    connections: list[Connection]
-    species_id: int
+    fitness: float
+    original_fitness: float
+    error: float
+    winner: bool
+    net: Network
+    gnome: Genome
+    species: Species | None
+    expected_offspring: float
     generation: int
+    eliminate: bool
+    champion: bool
+    super_champ_offspring: int
+    pop_champ: bool
+    pop_champ_child: bool
+    high_fit: float
+    time_alive: int
 
-    def speciation_difference(self, o):
-        assert isinstance(o, Organism)
+    # // Track its origin- for debugging or analysis- we can tell how the organism was born
+    mut_struct_baby: bool
+    mate_baby: bool
 
-        c1 = 1
-        c2 = 1
-        c3 = 1
+    # // MetaData for the object
+    metadata: str
+    modified: bool
 
-        E = excess(self, o)
-        D = disjoint(self, o)
-        N = total_length(self, o)
-        W = average_weight_difference(self, o)
+    def __init__(self, fit: float, g: Genome, gen: int, md: str = ""):
+        self.fitness = fit
+        self.original_fitness = self.fitness
+        self.gnome = g
+        self.net = self.gnome.genesis(self.gnome.genome_id)
+        self.species = None  # Start it in no Species
+        self.expected_offspring = 0
+        self.generation = gen
+        self.eliminate = False
+        self.error = 0
+        self.winner = False
+        self.champion = False
+        self.super_champ_offspring = 0
 
-        delta = (c1 * E) / N + (c2 * D) / N + (c3 * W)
+        # // If md is null, then we don't have metadata, otherwise we do have metadata so copy it over
+        self.metadata = md
 
-        return delta
+        self.time_alive = 0
 
-    def max_id(self):
-        return max(c.id for c in self.connections)
+        self.pop_champ = False
+        self.pop_champ_child = False
+        self.high_fit = 0
+        self.mut_struct_baby = False
+        self.mate_baby = False
 
-    def connection_count(self):
-        return len(self.connections)
+        self.modified = True
 
-    def mutate(self):
-        pass
-
-    def _mutation_add_node(self):
-        pass
-
-    def _mutation_add_connection(self):
-        pass
-
-    def _mutation_enable_disable_connection(self):
-        pass
-
-    def _mutation_shift_weigth(self):
-        pass
-
-    def _mutation_randomize_weight(self):
-        pass
-
-    def disjoint(self, other):
-        assert isinstance(other, Organism)
-        disjoint_connections: list[Connection] = []
-        for con in self.connections:
-            if (
-                con.id not in [n.id for n in other.connections]
-                and con.id < other.max_id()
-            ):
-                disjoint_connections.append(con)
-        return disjoint_connections
-
-    def excess(self, other):
-        assert isinstance(other, Organism)
-        excess_connections: list[Connection] = []
-        for connection in self.connections:
-            if (
-                connection.id not in [c.id for c in other.connections]
-                and connection.id > other.max_id()
-            ):
-                excess_connections.append(connection)
-        return excess_connections
-
-    def same(self, other):
-        assert isinstance(other, Organism)
-        same_connections: list[Connection] = []
-        for node in self.connections:
-            if node.id in [n.id for n in other.connections]:
-                same_connections.append(node)
-        return same_connections
-
-    _fitness: float
-
-    def fitness(self) -> float:
-        if self._fitness is None:
-            self._fitness = self._calc_fitness()
-        return self._fitness
+    # // Regenerate the network based on a change in the genotype
+    def update_phenotype(self):
+        self.net = self.gnome.genesis(self.gnome.genome_id)
+        self.modified = True
 
 
-def excess(organism1: Organism, organism2: Organism) -> int:
-    """Count the number of excess connections which are specified in one organism but not in the other"""
-    assert (
-        len(organism1.excess(organism2)) == 0 or len(organism2.excess(organism1)) == 0
-    )
-    return len(organism1.excess(organism2)) ^ len(organism2.excess(organism1))
+def order_orgs(x: Organism, y: Organism) -> bool:
+    return x.fitness > y.fitness
 
 
-def disjoint(organism1: Organism, organism2: Organism) -> int:
-    return len(organism1.disjoint(organism2)) + len(organism2.disjoint(organism1))
+def order_orgs_by_adjusted_fit(x: Organism, y: Organism) -> bool:
+    return adjusted_fit(x) > adjusted_fit(y)
 
 
-def total_length(organism1: Organism, organism2: Organism) -> int:
-    total = 0
-    total += len(organism1.connections)
-    total += len(organism2.disjoint(organism1))
-    total += len(organism2.excess(organism1))
-    return total
-
-
-def same_connections(organism1: Organism, organism2: Organism):
-    return zip(organism1.same(organism1), organism2.same(organism1))
-
-
-def average_weight_difference(organism1: Organism, organism2: Organism) -> float:
-    difference = 0
-    counter = 0
-    for con1, con2 in same_connections(organism1, organism2):
-        counter += 1
-        difference += abs(con1.weight - con2.weight)
-    return difference / counter
-
-
-def speciation(organism1: Organism, organism2: Organism):
-    c1 = 1
-    c2 = 1
-    c3 = 1
-    E = excess(organism1, organism2)
-    D = disjoint(organism1, organism2)
-    N = total_length(organism1, organism2)
-    W = average_weight_difference(organism1, organism2)
-    delta = (c1 * E) / N + (c2 * D) / N + (c3 * W)
-    return delta
+def adjusted_fit(x):
+    return x.fitness / x.species.organisms.size()
