@@ -1,6 +1,7 @@
 from numpy import average
 from src.robby.robot import Robot
-
+import pygame
+from pygame.surface import Surface
 
 class fitness:
     @staticmethod
@@ -13,7 +14,7 @@ class fitness:
 
         return (
             (distance * 0)
-            + (area_covered)
+            + (area_covered * 1)
             + (collisions * 0)
             + (avg_speed * 0)
             + (double_area * 0)

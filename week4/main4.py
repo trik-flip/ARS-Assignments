@@ -28,7 +28,7 @@ BLUE = (0, 0, 255)
 GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 BLACK = (0, 0, 0)
-STEP_SIZE = 0.01
+STEP_SIZE = 0.1
 
 
 def game_loop(
@@ -95,9 +95,9 @@ def game_loop(
 def draw_on_screen(robots: list[Robot], all_lines):
     robs = robots
     # robs = list(sorted(robots, key=lambda x: x.area_covered(), reverse=True))
-    for robot in robs[:3]:
+    for robot in robs[:5]:
         robot.draw_slime()
-    for robot in robs[:3]:
+    for robot in robs[:5]:
         robot.draw(all_lines)
 
 
@@ -128,22 +128,23 @@ def main(load_from_file=False):
     pygame.display.update()
 
     if load_from_file:
-        ea = EvolutionaryAlgorithm.load("ea.obj")
+        ea = EvolutionaryAlgorithm.load("ea-45.obj")
+        print("prev chosen")
     else:
         ea = EvolutionaryAlgorithm(
             survival_rate=0.5,
             population_size=12,
             input=12,
-            hidden=[10, 6],
+            hidden=[8,4],
             output=2,
             recur=-2,
-            mutation_chance=0,
+            mutation_chance=0.5,
         )
 
     robots = [Robot(screen, direction=0) for _ in ea.population]
 
-    while ea.generation_count < 4:
-        game_loop(ea.population, robots, 1500, screen, game_map)
+    while ea.generation_count < 95:
+        game_loop(ea.population, robots, 1000, screen, game_map)
         screen.fill(RED)
         pygame.display.update()
 
@@ -163,16 +164,14 @@ def main(load_from_file=False):
         ea.repopulate()
 
         robots = [Robot(screen, direction=0) for _ in ea.population]
-        if ea.generation_count % 5 == 0:
+        if ea.generation_count % 15 == 0:
             ea.save(f"ea-{ea.generation_count}-intermediate.obj")
 
     plt.title = "Final result"
-    plt.plot(avg_fitness_over_time)
-    plt.legend("avg_fitness_over_time")
-    plt.plot(best_fitness_over_time)
-    plt.legend("best_fitness_over_time")
-    plt.plot(diversity_over_time)
-    plt.legend("diversity_over_time")
+    plt.plot(avg_fitness_over_time,label="avg_fitness_over_time")
+    plt.plot(best_fitness_over_time,label="best_fitness_over_time")
+    plt.plot(diversity_over_time,label="diversity_over_time")
+    plt.legend(loc="upper left")
     plt.show()
 
     ea.save(f"ea-{ea.generation_count}.obj")
