@@ -101,7 +101,7 @@ def draw_on_screen(robots: list[Robot], all_lines):
         robot.draw(all_lines)
 
 
-def main(load_from_file=False):
+def main(load_from_file=True):
     avg_fitness_over_time = []
     best_fitness_over_time = []
     diversity_over_time = []
@@ -128,21 +128,23 @@ def main(load_from_file=False):
     pygame.display.update()
 
     if load_from_file:
-        ea = EvolutionaryAlgorithm.load("ea.obj")
+        print("loaded")
+        ea = EvolutionaryAlgorithm.load("ea-25-intermediate.obj")
+       
     else:
         ea = EvolutionaryAlgorithm(
             survival_rate=0.5,
             population_size=12,
             input=12,
-            hidden=[10, 6],
+            hidden=[8, 4],
             output=2,
             recur=-2,
-            mutation_chance=0,
+            mutation_chance=0.33,
         )
 
     robots = [Robot(screen, direction=0) for _ in ea.population]
 
-    while ea.generation_count < 4:
+    while ea.generation_count < 25:
         game_loop(ea.population, robots, 1500, screen, game_map)
         screen.fill(RED)
         pygame.display.update()
