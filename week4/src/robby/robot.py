@@ -50,6 +50,7 @@ class Robot:
     color: tuple[int, int, int]
 
     def draw(self, lines=[]):
+
         pygame.draw.circle(self.screen, self.color, self.position.to_tuple(), self.size)
         t_x = cos(self.direction)
         t_y = sin(self.direction)
@@ -184,6 +185,7 @@ class Robot:
             self.screen, (0, 255, 0), *(velocity * 10).to_tuple()
         )
         self.to_draw.append(new_pos)
+
         if not any(map(lambda l: l.intersects(velocity), lines)):
             self.set_position(x, y, direction)
             self.__update_sensors()
