@@ -28,7 +28,7 @@ BLUE = (0, 0, 255)
 GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 BLACK = (0, 0, 0)
-STEP_SIZE = 0.1
+STEP_SIZE = 0.01
 
 
 def game_loop(
@@ -101,7 +101,7 @@ def draw_on_screen(robots: list[Robot], all_lines):
         robot.draw(all_lines)
 
 
-def main(load_from_file=True):
+def main(load_from_file=False):
     avg_fitness_over_time = []
     best_fitness_over_time = []
     diversity_over_time = []
@@ -128,7 +128,7 @@ def main(load_from_file=True):
     pygame.display.update()
 
     if load_from_file:
-        ea = EvolutionaryAlgorithm.load("ea-45.obj")
+        ea = EvolutionaryAlgorithm.load("ea.obj")
         print("prev chosen")
     else:
         ea = EvolutionaryAlgorithm(
@@ -138,12 +138,12 @@ def main(load_from_file=True):
             hidden=[8,4],
             output=2,
             recur=-2,
-            mutation_chance=0.5,
+            mutation_chance=0.33,
         )
 
     robots = [Robot(screen, direction=0) for _ in ea.population]
 
-    while ea.generation_count < 95:
+    while ea.generation_count < 51:
         game_loop(ea.population, robots, 1000, screen, game_map)
         screen.fill(RED)
         pygame.display.update()
@@ -164,7 +164,7 @@ def main(load_from_file=True):
         ea.repopulate()
 
         robots = [Robot(screen, direction=0) for _ in ea.population]
-        if ea.generation_count % 15 == 0:
+        if ea.generation_count % 5 == 0:
             ea.save(f"ea-{ea.generation_count}-intermediate.obj")
 
     plt.title = "Final result"
