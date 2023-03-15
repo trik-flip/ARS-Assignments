@@ -10,6 +10,15 @@ from src.robby.line import Line
 from src.robby.robot import Robot
 from src.simple.evolutionary_algorithm import EvolutionaryAlgorithm
 from src.simple.evolutionary_algorithm_organism import EvolutionaryAlgorithmOrganism
+from testing_maps import double_trapezoid, room, valley_map
+from training_maps import map1, map2
+
+# imported_game_map = map1()
+imported_game_map = map2()
+# imported_game_map = double_trapezoid()
+# imported_game_map = room()
+# imported_game_map = valley_map()
+# imported_game_map = []
 
 
 def sigmoid(x):
@@ -92,12 +101,11 @@ def game_loop(
     pygame.display.update()
 
 
-def draw_on_screen(robots: list[Robot], all_lines):
+def draw_on_screen(robots: list[Robot], all_lines, num=5):
     robs = robots
-    # robs = list(sorted(robots, key=lambda x: x.area_covered(), reverse=True))
-    for robot in robs[:5]:
-        robot.draw_slime()
-    for robot in robs[:5]:
+    for robot in robs[:num]:
+        robot.draw_slime(robot.history)
+    for robot in robs[:num]:
         robot.draw(all_lines)
 
 
@@ -107,14 +115,6 @@ def main(load_from_file=False):
     diversity_over_time = []
     (width, height) = (1920, 1080)
 
-    point1 = 350, 350
-    point2 = 350, 880 - 150
-    point3 = 1700 - 150, 880 - 150
-
-    line1 = Line(*point1, *point2)
-    line2 = Line(*point2, *point3)
-    line3 = Line(*point1, *point3)
-
     pygame.init()
 
     screen = pygame.display.set_mode((width, height))
@@ -123,27 +123,26 @@ def main(load_from_file=False):
     box = Box(200, 200, 1700, 880)
     box.draw(screen)
 
-    game_map = box.lines() + [line1, line2, line3]
+    game_map = box.lines() + imported_game_map
 
     pygame.display.update()
 
     if load_from_file:
         ea = EvolutionaryAlgorithm.load("ea.obj")
-        print("prev chosen")
     else:
         ea = EvolutionaryAlgorithm(
-            survival_rate=0.5,
-            population_size=12,
+            survival_rate=0.2,
+            population_size=40,
             input=12,
-            hidden=[8,4],
+            hidden=[12, 6],
             output=2,
             recur=-2,
-            mutation_chance=0.33,
+            mutation_rate=0.2,
+            mutation_chance=0.2,
         )
 
-    robots = [Robot(screen, direction=0) for _ in ea.population]
-
-    while ea.generation_count < 51:
+    while ea.generation_count < 27:
+        robots = [Robot(screen, direction=0) for _ in ea.population]
         game_loop(ea.population, robots, 1000, screen, game_map)
         screen.fill(RED)
         pygame.display.update()
@@ -151,7 +150,7 @@ def main(load_from_file=False):
         ea.epoch(robots, fitness.calc)
 
         print(
-            f"[{ea.generation_count}] - [{ea.diversity():5.0f}] - [{ea.best_fitness:.1f}]"
+            f"[{ea.generation_count}] - [{ea.diversity():5.0f}] - [{ea.best_fitness:.1f}] - [{max(ea.fitness)}]"
         )
         avg = average(ea.fitness)
         best = min(ea.fitness)
@@ -163,18 +162,19 @@ def main(load_from_file=False):
         ea.selection()
         ea.repopulate()
 
-        robots = [Robot(screen, direction=0) for _ in ea.population]
         if ea.generation_count % 5 == 0:
             ea.save(f"ea-{ea.generation_count}-intermediate.obj")
 
     plt.title = "Final result"
-    plt.plot(avg_fitness_over_time,label="avg_fitness_over_time")
-    plt.plot(best_fitness_over_time,label="best_fitness_over_time")
-    plt.plot(diversity_over_time,label="diversity_over_time")
+    plt.plot(avg_fitness_over_time, label="avg_fitness_over_time")
+    plt.plot(best_fitness_over_time, label="best_fitness_over_time")
+    plt.plot(diversity_over_time, label="diversity_over_time")
     plt.legend(loc="upper left")
     plt.show()
 
     ea.save(f"ea-{ea.generation_count}.obj")
 
     print("trained")
-    game_loop(ea.best(), robots[:1], 20000000, screen, game_map)
+    num = 2
+    robots = [Robot(screen, direction=0) for _ in range(num)]
+    game_loop(ea.best(num), robots, 20000000, screen, game_map)

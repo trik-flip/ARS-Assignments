@@ -3,6 +3,7 @@ from src.robby.robot import Robot
 import pygame
 from pygame.surface import Surface
 
+
 class fitness:
     @staticmethod
     def calc(robot: Robot):

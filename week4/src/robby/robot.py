@@ -50,7 +50,6 @@ class Robot:
     color: tuple[int, int, int]
 
     def draw(self, lines=[]):
-
         pygame.draw.circle(self.screen, self.color, self.position.to_tuple(), self.size)
         t_x = cos(self.direction)
         t_y = sin(self.direction)
@@ -126,27 +125,24 @@ class Robot:
             drawing()
         self.to_draw = []
 
-    def area_covered(self):
-        if len(self.history) == 0:
-            return 0
-        been_here = [self.history[0]]
+    def _been_here(self):
+        been_here = []
         for pos in self.history:
             add = True
-            x1, y1 = pos
             for recorded_pos in been_here:
-                x2, y2 = recorded_pos
-                if ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** (1 / 2) < self.size:
+                if _distance(*pos, *recorded_pos) < self.size:
                     add = False
             if add:
                 been_here.append(pos)
-        return len(been_here)
+        return been_here
 
-    def draw_slime(self):
-        for x, y in self.history:
+    def area_covered(self):
+        return len(self._been_here())
+
+    def draw_slime(self, history_list, color=(28, 130, 249, 5)):
+        for x, y in history_list:
             circle = pygame.Surface((self.size * 2, self.size * 2), pygame.SRCALPHA)
-            pygame.draw.circle(
-                circle, (28, 130, 249, 5), (self.size, self.size), self.size
-            )
+            pygame.draw.circle(circle, color, (self.size, self.size), self.size)
             x, y = x - (self.size), y - (self.size)
             self.screen.blit(circle, (x, y))
 
@@ -287,3 +283,7 @@ class Robot:
         for s in self.sensors:
             s.direction = self.direction + s.offset
             s.position = self.position
+
+
+def _distance(x1, y1, x2, y2):
+    return ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** (1 / 2)

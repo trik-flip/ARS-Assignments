@@ -2,9 +2,7 @@ import pickle
 from random import random, sample
 
 from .evolutionary_algorithm_organism import EvolutionaryAlgorithmOrganism
-from .selection import (
-    elitist_selection, tournament_selection, roulette_wheel_selection,
-)
+from .selection import elitist_selection
 
 
 class EvolutionaryAlgorithm:
@@ -99,7 +97,7 @@ class EvolutionaryAlgorithm:
 
     def selection(self):
         size = int(self.population_size * self.survival_rate)
-        self.population = roulette_wheel_selection(self.__population_fitness_list(), size)
+        self.population = elitist_selection(self.__population_fitness_list(), size)
 
     def __population_fitness_list(
         self,
