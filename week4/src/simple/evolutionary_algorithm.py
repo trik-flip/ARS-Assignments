@@ -3,7 +3,7 @@ from random import random, sample
 
 from .evolutionary_algorithm_organism import EvolutionaryAlgorithmOrganism
 from .selection import (
-    elitist_selection, tournament_selection,
+    elitist_selection, tournament_selection, roulette_wheel_selection,
 )
 
 
@@ -99,7 +99,7 @@ class EvolutionaryAlgorithm:
 
     def selection(self):
         size = int(self.population_size * self.survival_rate)
-        self.population = tournament_selection(self.__population_fitness_list(), size)
+        self.population = roulette_wheel_selection(self.__population_fitness_list(), size)
 
     def __population_fitness_list(
         self,
