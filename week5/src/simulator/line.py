@@ -13,7 +13,6 @@ class Line:
 
     def len(self):
         return self.start.d(self.end)
-        return (self.dx**2 + self.dy**2) ** (1 / 2)
 
     @property
     def radians(self):
@@ -21,11 +20,11 @@ class Line:
 
     @property
     def dy(self):
-        return self.start.y - self.end.y
+        return self.end.dy(self.start)
 
     @property
     def dx(self):
-        return self.start.x - self.end.x
+        return self.end.dx(self.start)
 
     @property
     def gradient(self):
