@@ -2,6 +2,7 @@ from math import atan2
 import pygame
 from src.simulator.robot import Robot
 from src.simulator.position import Position
+from src.simulator.pose import Pose
 
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
@@ -67,6 +68,7 @@ while running:
         robby.steering_angle += STEP_SIZE / 10
 
     if key_event[pygame.K_r]:
+        robby._prob_pose = Pose(Position.place_with_randomness(240, 240, k=100))
         robby._pose.position = 240, 240
         robby.speed = 0
         robby._pose._direction = 0

@@ -1,9 +1,16 @@
 from math import cos, sin
+from random import random
 
 
 class Position:
     x: float
     y: float
+
+    @staticmethod
+    def place_with_randomness(x, y, k=1):
+        x_random = k * 2 * (-0.5 + random())
+        y_random = k * 2 * (-0.5 + random())
+        return Position(x + x_random, y + y_random)
 
     def d(self, other: object):
         assert isinstance(other, Position)
@@ -64,6 +71,12 @@ class Position:
     def __eq__(self, o: object) -> bool:
         assert isinstance(o, Position)
         return abs(self.dx(o)) < 1e-2 and abs(self.dy(o)) < 1e-2
+
+    def add_polar(self, length, direction):
+        p = self.copy()
+        p.x += cos(direction) * length
+        p.y += sin(direction) * length
+        return p
 
     @staticmethod
     def create_polar(length, direction):
