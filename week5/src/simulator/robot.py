@@ -1,10 +1,13 @@
-import numpy as np
-from numpy.random import normal as random
-import pygame
+import itertools
 from math import cos, sin
+
+import numpy as np
+import pygame
+from numpy.random import normal as random
+from pygame.surface import Surface
+
 from .pose import Pose
 from .position import Position
-from pygame.surface import Surface
 
 pygame.font.init()
 MY_FONT = pygame.font.SysFont("Times New Roman", 18)
@@ -115,8 +118,8 @@ class Robot:
 
     @property
     def u_random(self):
-        sa = self.steering_angle * random(loc=1, scale=0.5)
-        speed = self.speed * random(loc=1, scale=0.2)
+        sa = self.steering_angle * random(loc=1, scale=1)
+        speed = self.speed * random(loc=1, scale=0.8)
         return np.array([speed, sa])
 
     @u.setter
@@ -145,44 +148,51 @@ class Robot:
             np.linalg.inv(self.C.dot(self.sigma_pred).dot(self.C.T) + self.Q)
         )
 
+    @property
     def update_mu(self):
-        return self.mu_pred + self.k_correction.dot(self.z - self.C.dot(self.mu_pred))
+        return self.k_correction.dot(self.z - self.C.dot(self.mu_pred))
 
+    @property
     def update_mu_random(self):
-        return self.mu_pred_random + self.k_correction.dot(
-            self.z_prob - self.C.dot(self.mu_pred_random)
-        )
+        return self.k_correction.dot(self.z_prob - self.C.dot(self.mu_pred_random))
 
     def update_sigma(self):
         return (np.identity(3) - self.k_correction.dot(self.C)).dot(self.sigma_pred)
 
-    def update(self, beacons: list[Position]):
+    def update(self, beacons: list[Position]):  #! remove screen
+        self._save_history()
+        # Prediction
+        self.pose = self.mu_pred
+
+        self.prob_pose = self.mu_pred_random
+        self.__sigma = self.sigma_pred
+
+        # NOTE: Maybe check first if there are at least 2 beacons
+        # When a localization is done we can break and add the correction step
+        for b1, b2 in itertools.combinations(beacons, 2):
+            pos_p = self._pose.calc_position_with_bearing(b1, b2)
+            if pos_p is not None:
+                pass
+                # TODO: the correction step
+                # draw_robot(screen, 30, pos_p.position, pos_p._direction, (0, 200, 0))
+                break
+        self.u = "reset"
+
+    def _save_history(self):
         self.history.append(self.pose.array)
         self.prob_history.append(self.prob_pose.array)
-
-        self.pose = self.update_mu()
-        self.prob_pose = self.update_mu_random()
-        if len(beacons) >= 3:
-            for i in range(len(beacons) - 2):
-                b1, b2, b3 = beacons[i : i + 3]
-
-                bp = self._pose.position.triangulate_with_beacons(b1, b2, b3)
-                if bp is not None:
-                    self._prob_pose.position = self._pose.position.xy
-        self.__sigma = self.update_sigma()
-        self.u = "reset"
 
     def draw(self, screen):
         draw_robot(
             screen, self.size, self.pose.position, self.pose._direction, self.color
         )
-        draw_robot(
-            screen,
-            self.size,
-            self.prob_pose.position,
-            self.prob_pose._direction,
-            (255, 0, 0),
-        )
+        # draw_robot(
+        #     screen,
+        #     self.size,
+        #     self.prob_pose.position,
+        #     self.prob_pose._direction,
+        #     (255, 0, 0),
+        # )
 
 
 def draw_robot(

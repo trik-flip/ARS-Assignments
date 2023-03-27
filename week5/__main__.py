@@ -95,17 +95,12 @@ while running:
     if key_event[pygame.K_ESCAPE]:
         running = False
 
-    robby.update([b1,b2,b3])
+    robby.update([b1, b2, b3])
 
     robby.draw(screen)
 
     rpp = robby.pose.position
 
-    r1 = b1.d(rpp)
-    r2 = b2.d(rpp)
-    r3 = b3.d(rpp)
-
-    # bp = b1.triangulate(r1, b2, r2, b3, r3)
     bp = robby.pose.position.triangulate_with_beacons(b1, b2, b3)
     if bp is not None:
         pygame.draw.circle(screen, LIGHT_BLUE, bp.xy, 10, 2)
