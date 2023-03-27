@@ -12,6 +12,19 @@ class Pose:
         p = Pose(self.position.copy(), self._direction)
         return p
 
+    def __eq__(self, o):
+        assert isinstance(o, Pose)
+        return (
+            abs(self._direction - o._direction) < 1e-2 and self.position == o.position
+        )
+
+    def __add__(self, value):
+        p = self.copy()
+        x, y, t = value
+        p._position += Position(x, y)
+        p._direction += t
+        return p
+
     def __init__(self, init_position, init_direction=0.0) -> None:
         self._position = init_position
         self._direction = init_direction
