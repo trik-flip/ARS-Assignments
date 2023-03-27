@@ -8,6 +8,10 @@ class Pose:
     _position: Position
     _direction: float
 
+    def copy(self):
+        p = Pose(self.position.copy(), self._direction)
+        return p
+
     def __init__(self, init_position, init_direction=0.0) -> None:
         self._position = init_position
         self._direction = init_direction
