@@ -1,5 +1,5 @@
-from random import random
 import numpy as np
+from numpy.random import normal as random
 import pygame
 from math import cos, sin
 from .pose import Pose
@@ -36,7 +36,8 @@ class Robot:
         self.speed = speed
         self.size = size
         self.color = color
-
+        self.history = []
+        self.prob_history = []
         self.setup()
 
     def setup(self):
@@ -91,7 +92,7 @@ class Robot:
     def B_random(self):
         x = cos(self._prob_pose._direction)
         y = sin(self._prob_pose._direction)
-        a = 1 + random() - 0.5
+        a = 1 + (random() - 0.5)
         return np.array([[x, 0.0], [y, 0.0], [0, a]])
 
     C: np.ndarray
@@ -159,9 +160,19 @@ class Robot:
     def update_sigma(self):
         return (np.identity(3) - self.k_correction.dot(self.C)).dot(self.sigma_pred)
 
-    def update(self):
+    def update(self, beacons: list[Position]):
+        self.history.append(self.pose.array)
+        self.prob_history.append(self.prob_pose.array)
+
         self.pose = self.update_mu()
         self.prob_pose = self.update_mu_random()
+        if len(beacons) >= 3:
+            for i in range(len(beacons) - 2):
+                b1, b2, b3 = beacons[i : i + 3]
+
+                bp = self._pose.position.triangulate_with_beacons(b1, b2, b3)
+                if bp is not None:
+                    self._prob_pose.position = self._pose.position.xy
         self.__sigma = self.update_sigma()
         self.u = "reset"
 
