@@ -16,6 +16,10 @@ class Position:
         assert isinstance(other, Position)
         return ((other.x - self.x) ** 2 + (other.y - self.y) ** 2) ** (1 / 2)
 
+    def dxy(self, other: object):
+        assert isinstance(other, Position)
+        return self.dx(other), self.dy(other)
+
     def dy(self, o):
         assert isinstance(o, Position)
         return self.y - o.y
@@ -31,7 +35,6 @@ class Position:
 
         pc1 = self.intersection_of_beacon(b1, b2)
         pc2 = self.intersection_of_beacon(b1, b3)
-        # pc3 = self.intersection_of_beacon(b2, b3)
         if pc2 is None or pc1 is None:
             return None
 

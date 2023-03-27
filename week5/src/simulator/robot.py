@@ -88,13 +88,6 @@ class Robot:
         y = sin(self._pose._direction)
         return np.array([[x, 0], [y, 0], [0, 1]])
 
-    @property
-    def B_random(self):
-        x = cos(self._prob_pose._direction)
-        y = sin(self._prob_pose._direction)
-        a = 1 + (random() - 0.5)
-        return np.array([[x, 0.0], [y, 0.0], [0, a]])
-
     C: np.ndarray
     R: np.ndarray
     Q: np.ndarray
@@ -118,15 +111,12 @@ class Robot:
     @property
     def u(self):
         sa = self.steering_angle
-
         return np.array([self.speed, sa])
 
     @property
     def u_random(self):
-        sa = self.steering_angle
-
-        speed = self.speed * (1+(8 * random() / 10) - 0.2)
-
+        sa = self.steering_angle * random(loc=1, scale=0.5)
+        speed = self.speed * random(loc=1, scale=0.2)
         return np.array([speed, sa])
 
     @u.setter
@@ -143,7 +133,7 @@ class Robot:
 
     @property
     def mu_pred_random(self):
-        return self.A.dot(self.mu_prob) + self.B_random.dot(self.u_random)
+        return self.A.dot(self.mu_prob) + self.B.dot(self.u_random)
 
     @property
     def sigma_pred(self):

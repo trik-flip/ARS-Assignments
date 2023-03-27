@@ -162,7 +162,8 @@ def main(load_from_file=False):
         ea.selection()
         ea.repopulate()
 
-        if ea.generation_count % 5 == 0:
+        robots = [Robot(screen, direction=0) for _ in ea.population]
+        if ea.generation_count % 15 == 0:
             ea.save(f"ea-{ea.generation_count}-intermediate.obj")
 
     plt.title = "Final result"
