@@ -24,12 +24,47 @@ class Position:
         assert isinstance(o, Position)
         return self.x - o.x
 
+    def triangulate_with_beacons(self, b1, b2, b3):
+        assert isinstance(b1, Position)
+        assert isinstance(b2, Position)
+        assert isinstance(b3, Position)
+
+        pc1 = self.intersection_of_beacon(b1, b2)
+        pc2 = self.intersection_of_beacon(b1, b3)
+        # pc3 = self.intersection_of_beacon(b2, b3)
+        if pc2 is None or pc1 is None:
+            return None
+
+        p1, p2 = pc2
+        p3, p4 = pc1
+        if p1 == p3 or p1 == p4:
+            return p1
+        return p2
+
+    def intersection_of_beacon(self, b1, b2):
+        assert isinstance(b1, Position)
+        assert isinstance(b2, Position)
+        r1 = self.d(b1)
+        r2 = self.d(b2)
+        # source: https://www.xarg.org/2016/07/calculate-the-intersection-points-of-two-circles/
+        d = b1.d(b2)
+        if d <= (r1 + r2) and d >= abs(r2 - r1) and r1 < 200 and r2 < 200:
+            ex = b2.dx(b1) / d
+            ey = b2.dy(b1) / d
+
+            x = (r1 * r1 - r2 * r2 + d * d) / (2 * d)
+            y = sqrt(r1 * r1 - x * x)
+
+            p1 = Position(b1.x + x * ex - y * ey, b1.y + x * ey + y * ex)
+            p2 = Position(b1.x + x * ex + y * ey, b1.y + x * ey - y * ex)
+            return p1, p2
+        return None
+
     def triangulate(self, r1: float, o2, r2: float, o3, r3: float):
         assert isinstance(o2, Position)
         assert isinstance(o3, Position)
 
         pc1 = self.intersection_of_circles(r1, o2, r2)
-
         pc2 = self.intersection_of_circles(r1, o3, r3)
         if pc1 is None or pc2 is None:
             return None
@@ -38,8 +73,7 @@ class Position:
         p3, p4 = pc2
         if p1 == p3 or p1 == p4:
             return p1
-        else:
-            return p2
+        return p2
 
     def intersection_of_circles(self, r1: float, o2, r2: float):
         assert isinstance(o2, Position)
@@ -50,7 +84,7 @@ class Position:
             ey = o2.dy(self) / d
 
             x = (r1 * r1 - r2 * r2 + d * d) / (2 * d)
-            y = (r1 * r1 - x * x) ** (1 / 2)
+            y = sqrt(r1 * r1 - x * x)
 
             p1 = Position(self.x + x * ex - y * ey, self.y + x * ey + y * ex)
             p2 = Position(self.x + x * ex + y * ey, self.y + x * ey - y * ex)
@@ -70,16 +104,13 @@ class Position:
 
     def __eq__(self, o: object) -> bool:
         assert isinstance(o, Position)
-        return abs(self.dx(o)) < 1e-2 and abs(self.dy(o)) < 1e-2
+        return self.d(o) < 1e-2
 
-    def add_polar(self, length, direction):
-        p = self.copy()
-        p.x += cos(direction) * length
-        p.y += sin(direction) * length
-        return p
+    def add_polar(self, length: float, direction: float):
+        return self + Position.create_polar(length, direction)
 
     @staticmethod
-    def create_polar(length, direction):
+    def create_polar(length: float, direction: float):
         return Position(length * cos(direction), length * sin(direction))
 
     @property
@@ -88,3 +119,7 @@ class Position:
 
     def copy(self):
         return Position(*self.xy)
+
+
+def sqrt(x: int | float) -> float:
+    return x ** (1 / 2)
