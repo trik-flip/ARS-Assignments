@@ -121,6 +121,14 @@ class Robot:
 
         return np.array([self.speed, sa])
 
+    @property
+    def u_random(self):
+        sa = self.steering_angle
+
+        speed = self.speed * (1+(8 * random() / 10) - 0.2)
+
+        return np.array([speed, sa])
+
     @u.setter
     def u(self, _val):
         self.steering_angle = 0
@@ -135,9 +143,7 @@ class Robot:
 
     @property
     def mu_pred_random(self):
-        return self.A.dot(self.mu_prob) + self.B_random.dot(self.u) * (
-            1 + (8 * random() / 10) - 0.2
-        )
+        return self.A.dot(self.mu_prob) + self.B_random.dot(self.u_random)
 
     @property
     def sigma_pred(self):

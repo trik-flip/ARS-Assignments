@@ -24,3 +24,5 @@ class Pose:
         x, y = value
         self._position.x = x
         self._position.y = y
+
+    
