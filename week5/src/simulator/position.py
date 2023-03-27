@@ -1,5 +1,5 @@
 from math import cos, sin
-from random import random
+from numpy.random import normal as random
 
 
 class Position:
@@ -7,10 +7,8 @@ class Position:
     y: float
 
     @staticmethod
-    def place_with_randomness(x, y, k=1):
-        x_random = k * 2 * (-0.5 + random())
-        y_random = k * 2 * (-0.5 + random())
-        return Position(x + x_random, y + y_random)
+    def place_with_noise(x, y, k=1):
+        return Position(x + random(scale=k), y + random(scale=k))
 
     def d(self, other: object):
         assert isinstance(other, Position)

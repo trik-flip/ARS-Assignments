@@ -74,3 +74,9 @@ class Pose:
         x, y = position.dxy(beacon)
         possible_pose2 = Pose(position, bear + atan2(y, x))
         return possible_pose2
+
+    def update_pose(self, value: tuple[float, float, float]):
+        x, y, d = value
+        self._position.x += x
+        self._position.y += y
+        self._direction += d

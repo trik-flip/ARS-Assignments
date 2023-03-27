@@ -16,6 +16,7 @@ MY_FONT = pygame.font.SysFont("Times New Roman", 18)
 class Robot:
     def __init__(
         self,
+        *,
         size=20,
         color=(80,) * 3,
         position=(1920 / 2, 1080 / 2),
@@ -32,10 +33,8 @@ class Robot:
             direction (float, optional): the starting direction. Defaults to 0.0.
             max_steering_angle (float, optional): the max steering angle per frame executed. Defaults to 0.3.
         """
-        self._prob_pose = Pose(
-            Position.place_with_randomness(*position, k=100), direction
-        )
-        self._pose = Pose(Position(*position), direction)
+        self.pose = Pose(Position(*position), direction)
+        self.mu = Pose(Position.place_with_noise(*position, k=100), direction).array
         self.speed = speed
         self.size = size
         self.color = color
@@ -46,34 +45,11 @@ class Robot:
     def setup(self):
         self.steering_angle = 0
 
-        self.A = np.identity(3)  # state to state transition
         self.C = np.identity(3)  # state to observation mapping
         self.R = np.identity(3) * 1e-5  # Pose prediction error
         self.Q = np.identity(3) * 1e-5  # ... prediction error
         self.__sigma = np.identity(3)  #
 
-    @property
-    def pose(self):
-        return self._pose
-
-    @pose.setter
-    def pose(self, value):
-        x, y, d = value
-        self.pose.position = x, y
-        self.pose._direction = d
-
-    @property
-    def prob_pose(self):
-        return self._prob_pose
-
-    @prob_pose.setter
-    def prob_pose(self, value):
-        x, y, d = value
-        self.prob_pose.position = x, y
-        self.prob_pose._direction = d
-
-    _prob_pose: Pose
-    _pose: Pose
     speed: float
     steering_angle: float
     max_steering_angle: float
@@ -82,13 +58,13 @@ class Robot:
     size: float
     color: tuple[int, int, int]
 
+    mu: np.ndarray
     __sigma: np.ndarray
-    A: np.ndarray
 
     @property
     def B(self):
-        x = cos(self._pose._direction)
-        y = sin(self._pose._direction)
+        x = cos(self.mu[2])
+        y = sin(self.mu[2])
         return np.array([[x, 0], [y, 0], [0, 1]])
 
     C: np.ndarray
@@ -97,19 +73,7 @@ class Robot:
 
     @property
     def z(self):
-        return self.C.dot(self._pose.array) + np.array([0, 0, 0])
-
-    @property
-    def z_prob(self):
-        return self.C.dot(self._prob_pose.array) + np.array([0, 0, 0])
-
-    @property
-    def mu(self):
-        return self._pose.array
-
-    @property
-    def mu_prob(self):
-        return self._prob_pose.array
+        return self.C.dot(self.mu) + np.array([random(), random(), random()])
 
     @property
     def u(self):
@@ -117,30 +81,18 @@ class Robot:
         return np.array([self.speed, sa])
 
     @property
-    def u_random(self):
+    def noisy_u(self):
         sa = self.steering_angle * random(loc=1, scale=1)
         speed = self.speed * random(loc=1, scale=0.8)
         return np.array([speed, sa])
 
-    @u.setter
-    def u(self, _val):
-        self.steering_angle = 0
-
-    @property
-    def sigma(self):
-        return self.__sigma
-
     @property
     def mu_pred(self):
-        return self.A.dot(self.mu) + self.B.dot(self.u)
-
-    @property
-    def mu_pred_random(self):
-        return self.A.dot(self.mu_prob) + self.B.dot(self.u_random)
+        return self.mu + self.B.dot(self.noisy_u)
 
     @property
     def sigma_pred(self):
-        return self.A.dot(self.sigma).dot(self.A.T) + self.R
+        return self.__sigma + self.R
 
     @property
     def k_correction(self):
@@ -152,56 +104,70 @@ class Robot:
     def update_mu(self):
         return self.k_correction.dot(self.z - self.C.dot(self.mu_pred))
 
-    @property
-    def update_mu_random(self):
-        return self.k_correction.dot(self.z_prob - self.C.dot(self.mu_pred_random))
-
     def update_sigma(self):
         return (np.identity(3) - self.k_correction.dot(self.C)).dot(self.sigma_pred)
 
-    def update(self, beacons: list[Position]):  #! remove screen
+    def update(self, beacons: list[Position]):
         self._save_history()
         # Prediction
-        self.pose = self.mu_pred
+        self._update()
 
-        self.prob_pose = self.mu_pred_random
+        self.mu = self.mu_pred
         self.__sigma = self.sigma_pred
 
         # NOTE: Maybe check first if there are at least 2 beacons
         # When a localization is done we can break and add the correction step
         for b1, b2 in itertools.combinations(beacons, 2):
-            pos_p = self._pose.calc_position_with_bearing(b1, b2)
+            pos_p = self.pose.calc_position_with_bearing(b1, b2)
             if pos_p is not None:
+                self.mu = pos_p.array
                 pass
                 # TODO: the correction step
                 # draw_robot(screen, 30, pos_p.position, pos_p._direction, (0, 200, 0))
                 break
-        self.u = "reset"
+        self.steering_angle = 0
+
+    def _update(self):
+        x = cos(self.pose._direction)
+        y = sin(self.pose._direction)
+        local_b = np.array([[x, 0], [y, 0], [0, 1]])
+        self.pose.update_pose(local_b.dot(self.u))
 
     def _save_history(self):
         self.history.append(self.pose.array)
-        self.prob_history.append(self.prob_pose.array)
+        self.prob_history.append(self.mu)
 
     def draw(self, screen):
-        draw_robot(
-            screen, self.size, self.pose.position, self.pose._direction, self.color
+        draw_pose(screen, self.pose, self.size, self.color)
+        draw_pose(
+            screen,
+            self.mu,
+            self.size,
+            (255, 0, 0),
         )
-        # draw_robot(
-        #     screen,
-        #     self.size,
-        #     self.prob_pose.position,
-        #     self.prob_pose._direction,
-        #     (255, 0, 0),
-        # )
 
 
-def draw_robot(
+def draw_pose(
+    screen,
+    pose: Pose | tuple[float, float, float],
+    size: float,
+    color: tuple[int, int, int],
+):
+    if isinstance(pose, Pose):
+        draw_robot_circle(screen, size, pose.position, pose._direction, color)
+    else:
+        draw_robot_circle(screen, size, pose[:2], pose[2], color)
+
+
+def draw_robot_circle(
     screen,
     size: float,
-    position: Position,
+    position: Position | tuple[float, float],
     direction: float,
     color: tuple[int, int, int],
 ):
+    if not isinstance(position, Position):
+        position = Position(*position)
     pygame.draw.circle(
         screen,
         color,

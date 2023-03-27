@@ -65,7 +65,7 @@ while running:
     for event in ev:
         if event.type == pygame.MOUSEBUTTONDOWN:
             x, y = pygame.mouse.get_pos()
-            robby._pose.position = x, y
+            robby.pose.position = x, y
         if event.type == pygame.QUIT:
             running = False
 
@@ -84,10 +84,10 @@ while running:
         robby.steering_angle += STEP_SIZE / 10
 
     if key_event[pygame.K_r]:
-        robby._prob_pose = Pose(Position.place_with_randomness(240, 240, k=100))
-        robby._pose.position = 240, 240
+        robby.mu = Pose(Position.place_with_noise(240, 240, k=100)).array
+        robby.pose.position = 240, 240
         robby.speed = 0
-        robby._pose._direction = 0
+        robby.pose._direction = 0
 
     if key_event[pygame.K_x]:
         robby.speed = 0
