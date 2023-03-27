@@ -84,7 +84,7 @@ while running:
         robby.steering_angle += STEP_SIZE / 10
 
     if key_event[pygame.K_r]:
-        robby.mu = Pose(Position.place_with_noise(240, 240, k=100)).array
+        robby.mu = Pose(Position.place_with_noise(240, 240, k=10)).array
         robby.pose.position = 240, 240
         robby.speed = 0
         robby.pose._direction = 0

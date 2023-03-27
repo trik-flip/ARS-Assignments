@@ -34,7 +34,7 @@ class Robot:
             max_steering_angle (float, optional): the max steering angle per frame executed. Defaults to 0.3.
         """
         self.pose = Pose(Position(*position), direction)
-        self.mu = Pose(Position.place_with_noise(*position, k=100), direction).array
+        self.mu = Pose(Position.place_with_noise(*position, k=10), direction).array
         self.speed = speed
         self.size = size
         self.color = color
@@ -82,8 +82,10 @@ class Robot:
 
     @property
     def noisy_u(self):
-        sa = self.steering_angle * random(loc=1, scale=1)
-        speed = self.speed * random(loc=1, scale=0.8)
+        r1 = random(loc=1)
+        sa = self.steering_angle * r1
+        r2 = random(loc=1, scale=0.8)
+        speed = self.speed * r2
         return np.array([speed, sa])
 
     @property
@@ -109,9 +111,9 @@ class Robot:
 
     def update(self, beacons: list[Position]):
         self._save_history()
-        # Prediction
         self._update()
 
+        # Prediction
         self.mu = self.mu_pred
         self.__sigma = self.sigma_pred
 
@@ -121,6 +123,7 @@ class Robot:
             pos_p = self.pose.calc_position_with_bearing(b1, b2)
             if pos_p is not None:
                 self.mu = pos_p.array
+                self.__sigma = self.update_sigma()
                 pass
                 # TODO: the correction step
                 # draw_robot(screen, 30, pos_p.position, pos_p._direction, (0, 200, 0))
@@ -141,7 +144,7 @@ class Robot:
         draw_pose(screen, self.pose, self.size, self.color)
         draw_pose(
             screen,
-            self.mu,
+            tuple(self.mu),
             self.size,
             (255, 0, 0),
         )
