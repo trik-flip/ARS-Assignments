@@ -1,24 +1,20 @@
-from random import random, randint
+from random import randint, random, sample
+
 from gene import Gene
-from nnode import NNode
-from trait import Trait
-from innovation import Innovation, InnovationType
-from network import Network
-from enum import Enum
-from nnode import NodePlace, NodeType
+from innovation import Innovation
 from link import Link
-from week4.src.NEAT.neat import rand_pos_neg
-from week4.src.NEAT.util import select_random
+from mutator import Mutator
+from neat import rand_pos_neg
+from network import Network
+from nnode import NNode, NodePlace, NodeType
+from trait import Trait
+from util import select_random
+from innovation_type import InnovationType
 
-disjoint_coeff = 0.5
-excess_coeff = 0.5
-mutdiff_coeff = 0.5
+disjoint_coefficient = 0.5
+excess_coefficient = 0.5
+mutation_diff_coefficient = 0.5
 recur_only_prob = 0.3
-
-
-class Mutator(Enum):
-    GAUSSIAN = 0
-    COLDGAUSSIAN = 1
 
 
 class Genome:
@@ -47,116 +43,89 @@ class Genome:
     def create_incomplete_genome_specs(
         id: int, t: list[Trait], n: list[NNode], links: list[Link]
     ):
-        # std::vector<Link *>::iterator curlink;
         gen = Genome()
         gen.traits = t
         gen.nodes = n
         gen.genome_id = id
 
         # We go through the links and turn them into original genes
-        for curlink in links:
+        for link in links:
             # Create genes one at a time
-            tempgene = Gene.create_a_trait(
-                curlink.link_trait,
-                curlink.weight,
-                curlink.in_node,
-                curlink.out_node,
-                curlink.is_recurrent,
+            temp_gene = Gene.create_a_trait(
+                link.link_trait,
+                link.weight,
+                link.in_node,
+                link.out_node,
+                link.is_recurrent,
                 1.0,
                 0.0,
             )
-            gen.genes.append(tempgene)
+            gen.genes.append(temp_gene)
 
     # This special constructor creates a Genome
-    # with i inputs, o outputs, n out of nmax hidden units, and random
+    # with i inputs, o outputs, n out of n_max hidden units, and random
     # connectivity.  If r is True then recurrent connections will
     # be included.
     @staticmethod
     def create_special(
-        new_id: int, i: int, o: int, n: int, nmax: int, r: bool, linkprob: float
+        new_id: int, i: int, o: int, n: int, n_max: int, r: bool, link_prob: float
     ):
         G = Genome()
-        totalnodes: int
+        total_nodes: int
         cm_ptr: int
-        matrixdim: int
+        matrix_dim: int
         count: int
-        ncount: int
+        c: int
         row: int
         col: int
         new_weight: float
         max_node: int
         first_output: int
-        totalnodes = i + o + nmax
-        matrixdim = totalnodes * totalnodes
+        total_nodes = i + o + n_max
+        matrix_dim = total_nodes * total_nodes
         cm: list[bool] = []
         max_node = i + n
-        first_output = totalnodes - o + 1
-        newnode: NNode
+        first_output = total_nodes - o + 1
+        node: NNode
         new_gene: Gene
-        newtrait: Trait
+        new_trait: Trait
         in_node: NNode
         out_node: NNode
-        genome_id = new_id
+        G.genome_id = new_id
         cm_ptr = 0
-        for count in range(matrixdim):
-            if random() < linkprob:
-                cm[cm_ptr] = True
-            else:
-                cm[cm_ptr] = False
+        for count in range(matrix_dim):
+            cm[cm_ptr] = random() < link_prob
             cm_ptr += 1
 
-        newtrait = Trait.create_from_manual(1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-        G.traits.append(newtrait)
+        new_trait = Trait.create_from_manual(1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        G.traits.append(new_trait)
 
-        for ncount in range(i):
-            if ncount + 1 < i:
-                np = NodePlace.INPUT
-            else:
-                np = NodePlace.BIAS
-            newnode = NNode.create_from_nodetype(NodeType.SENSOR, ncount + 1, np)
+        for node in Genome.add_input_nodes(i, G):
+            node.node_trait = new_trait
+        for node in Genome.add_hidden_nodes(i, n, G):
+            node.node_trait = new_trait
+        for node in Genome.add_output_nodes(G, total_nodes, first_output):
+            node.node_trait = new_trait
 
-            newnode.node_trait = newtrait
-
-            G.nodes.append(newnode)
-
-        for ncount in range(n):
-            newnode = NNode.create_from_nodetype(
-                NodeType.NEURON, ncount + 1 + i, NodePlace.HIDDEN
-            )
-            newnode.node_trait = newtrait
-            G.nodes.append(newnode)
-
-        for ncount in range(totalnodes - (first_output - 1)):
-            newnode = NNode.create_from_nodetype(
-                NodeType.NEURON, ncount + first_output + 1, NodePlace.OUTPUT
-            )
-            newnode.node_trait = newtrait
-            G.nodes.append(newnode)
-
-        ccount = 1
-
-        cm_ptr = 0
         count = 0
-        for col in range(1, 1 + totalnodes):
-            for row in range(1, totalnodes + 1):
+        for col in range(1, 1 + total_nodes):
+            for row in range(1, total_nodes + 1):
                 if (
-                    cm[cm_ptr]
+                    cm[count]
                     and col > i
                     and (col <= max_node or col >= first_output)
                     and (row <= max_node or row >= first_output)
                 ):
-                    node_iter = 0
-                    while (G.nodes[node_iter]).node_id != row:
-                        node_iter += 1
+                    node_iter = Genome._find_node(G, row)
                     in_node = G.nodes[node_iter]
-                    node_iter = 0
-                    while (G.nodes[node_iter]).node_id != col:
-                        node_iter += 1
+
+                    node_iter = Genome._find_node(G, col)
                     out_node = G.nodes[node_iter]
+
                     new_weight = rand_pos_neg() * random()
                     if col > row:
                         new_gene = Gene.create_a_trait(
-                            newtrait,
+                            new_trait,
                             new_weight,
                             in_node,
                             out_node,
@@ -164,11 +133,10 @@ class Genome:
                             count,
                             new_weight,
                         )
-
                         G.genes.append(new_gene)
                     elif r:
                         new_gene = Gene.create_a_trait(
-                            newtrait,
+                            new_trait,
                             new_weight,
                             in_node,
                             out_node,
@@ -176,12 +144,43 @@ class Genome:
                             count,
                             new_weight,
                         )
-
                         G.genes.append(new_gene)
 
                 count += 1
-                cm_ptr += 1
         return G
+
+    @staticmethod
+    def _find_node(G, row):
+        node_iter = 0
+        while G.nodes[node_iter].node_id != row:
+            node_iter += 1
+        return node_iter
+
+    @staticmethod
+    def add_output_nodes(G, total_nodes, first_output):
+        for c in range(total_nodes - (first_output - 1)):
+            node = NNode.create_from_nodetype(
+                NodeType.NEURON, c + first_output + 1, NodePlace.OUTPUT
+            )
+            G.nodes.append(node)
+            yield node
+
+    @staticmethod
+    def add_hidden_nodes(i, n, G):
+        for c in range(n):
+            node = NNode.create_from_nodetype(
+                NodeType.NEURON, c + 1 + i, NodePlace.HIDDEN
+            )
+            G.nodes.append(node)
+            yield node
+
+    @staticmethod
+    def add_input_nodes(i, G):
+        for c in range(i):
+            np = NodePlace.INPUT if c + 1 < i else NodePlace.BIAS
+            node = NNode.create_from_nodetype(NodeType.SENSOR, c + 1, np)
+            G.nodes.append(node)
+            yield node
 
     @staticmethod
     def create_3_possible_types(num_in: int, num_out: int, num_hidden: int, type: int):
@@ -189,14 +188,14 @@ class Genome:
         inputs: list[NNode] = []
         outputs: list[NNode] = []
         hidden: list[NNode] = []
-        bias: NNode
+        bias: NNode | None = None
 
-        newnode: NNode
+        node: NNode
         gene: Gene
         trait: Trait
 
-        count: int
-        ncount: int
+        c: int
+        c: int
 
         G.genome_id = 0
 
@@ -205,94 +204,80 @@ class Genome:
 
         num_hidden = type * num_in * num_out
 
-        for ncount in range(num_in):
-            if ncount + 1 < num_in:
-                newnode = NNode.create_from_nodetype(
-                    NodeType.SENSOR, ncount + 1, NodePlace.INPUT
+        for c in range(num_in):
+            if c + 1 < num_in:
+                node = NNode.create_from_nodetype(
+                    NodeType.SENSOR, c + 1, NodePlace.INPUT
                 )
             else:
-                newnode = NNode.create_from_nodetype(
-                    NodeType.SENSOR, ncount + 1, NodePlace.BIAS
+                node = NNode.create_from_nodetype(
+                    NodeType.SENSOR, c + 1, NodePlace.BIAS
                 )
-                bias = newnode
+                bias = node
+            G.nodes.append(node)
+            inputs.append(node)
+        for node in Genome.add_hidden_nodes(num_in, num_hidden, G):
+            hidden.append(node)
 
-            G.nodes.append(newnode)
-            inputs.append(newnode)
-
-        for ncount in range(num_hidden):
-            newnode = NNode.create_from_nodetype(
-                NodeType.NEURON, ncount + num_in + 1, NodePlace.HIDDEN
+        for c in range(num_out):
+            node = NNode.create_from_nodetype(
+                NodeType.NEURON, c + num_in + num_hidden + 1, NodePlace.OUTPUT
             )
-            G.nodes.append(newnode)
-            hidden.append(newnode)
+            G.nodes.append(node)
+            outputs.append(node)
 
-        for ncount in range(num_out):
-            newnode = NNode.create_from_nodetype(
-                NodeType.NEURON, ncount + num_in + num_hidden + 1, NodePlace.OUTPUT
-            )
-            G.nodes.append(newnode)
-            outputs.append(newnode)
-
-        count = 1
+        c = 1
         if type == 0:
             for node1 in outputs:
                 for node2 in inputs:
-                    gene = Gene.create_a_trait(trait, 0, node2, node1, False, count, 0)
+                    gene = Gene.create_a_trait(trait, 0, node2, node1, False, c, 0)
 
                     G.genes.append(gene)
 
-                    count += 1
+                    c += 1
 
         elif type == 1:
             node3 = 0
             for node1 in outputs:
                 for node2 in inputs:
                     gene = Gene.create_a_trait(
-                        trait, 0, node2, hidden[node3], False, count, 0
+                        trait, 0, node2, hidden[node3], False, c, 0
                     )
                     G.genes.append(gene)
 
-                    count += 1
+                    c += 1
 
                     gene = Gene.create_a_trait(
-                        trait, 0, hidden[node3], node1, False, count, 0
+                        trait, 0, hidden[node3], node1, False, c, 0
                     )
                     G.genes.append(gene)
 
                     node3 += 1
-                    count += 1
+                    c += 1
 
         elif type == 2:
             for node1 in hidden:
                 for node2 in inputs:
-                    gene = Gene.create_a_trait(trait, 0, node2, node1, False, count, 0)
-
+                    gene = Gene.create_a_trait(trait, 0, node2, node1, False, c, 0)
                     G.genes.append(gene)
-
-                    count += 1
+                    c += 1
 
             for node1 in outputs:
                 for node2 in hidden:
-                    gene = Gene.create_a_trait(trait, 0, node2, node1, False, count, 0)
-
+                    gene = Gene.create_a_trait(trait, 0, node2, node1, False, c, 0)
                     G.genes.append(gene)
-
-                    count += 1
+                    c += 1
 
             for node1 in outputs:
-                gene = Gene.create_a_trait(trait, 0, bias, node1, False, count, 0)
-
+                gene = Gene.create_a_trait(trait, 0, bias, node1, False, c, 0)
                 G.genes.append(gene)
-
-                count += 1
+                c += 1
 
             for node1 in hidden:
                 for node2 in hidden:
-                    gene = Gene.create_a_trait(trait, 0, node2, node1, True, count, 0)
-
+                    gene = Gene.create_a_trait(trait, 0, node2, node1, True, c, 0)
                     G.genes.append(gene)
-
-                    count += 1
+                    c += 1
         return G
 
     def get_last_node_id(self) -> int:
@@ -314,8 +299,8 @@ class Genome:
         out_list: list[NNode] = []
         all_list: list[NNode] = []
 
-        inode: NNode
-        onode: NNode
+        in_node: NNode
+        out_node: NNode
 
         new_net: Network
 
@@ -336,24 +321,25 @@ class Genome:
 
         for gene in self.genes:
             if gene.enable:
-                link = gene.lnk
-                inode = link.in_node.analogue
-                onode = link.out_node.analogue
+                link = gene.link
+
+                assert link.in_node is not None
+                assert link.out_node is not None
+
+                in_node = link.in_node.analogue
+                out_node = link.out_node.analogue
                 new_link = Link.create_no_trait(
-                    link.weight, inode, onode, link.is_recurrent
+                    link.weight, in_node, out_node, link.is_recurrent
                 )
 
-                onode.incoming.append(new_link)
-                inode.outgoing.append(new_link)
+                out_node.incoming.append(new_link)
+                in_node.outgoing.append(new_link)
 
                 trait = link.link_trait
 
                 new_link.derive_trait(trait)
 
-                if new_link.weight > 0:
-                    weight_mag = new_link.weight
-                else:
-                    weight_mag = -new_link.weight
+                weight_mag = abs(new_link.weight)
                 if weight_mag > max_weight:
                     max_weight = weight_mag
 
@@ -375,7 +361,7 @@ class Genome:
         new_gene: Gene
         assoc_trait: Trait | None
         inode: NNode
-        onode: NNode
+        out_node: NNode
         trait_ptr: Trait | None
         new_genome: Genome
         for trait in self.traits:
@@ -397,10 +383,12 @@ class Genome:
             nodes_dup.append(new_node)
 
         for gene in self.genes:
-            inode = gene.lnk.in_node.dup
-            onode = gene.lnk.out_node.dup
+            assert gene.link.in_node is not None
+            assert gene.link.out_node is not None
+            inode = gene.link.in_node.dup
+            out_node = gene.link.out_node.dup
 
-            trait_ptr = gene.lnk.link_trait
+            trait_ptr = gene.link.link_trait
             if trait_ptr is None:
                 assoc_trait = None
             else:
@@ -409,7 +397,7 @@ class Genome:
                     trait += 1
                 assoc_trait = traits_dup[trait]
 
-            new_gene = Gene.create_from_gene(gene, assoc_trait, inode, onode)
+            new_gene = Gene.create_from_gene(gene, assoc_trait, inode, out_node)
             genes_dup.append(new_gene)
 
         new_genome = Genome.create_full_genome_specs(
@@ -420,10 +408,10 @@ class Genome:
 
     def verify(self) -> bool:
         for gene in self.genes:
-            inode = gene.lnk.in_node
-            onode = gene.lnk.out_node
+            inode = gene.link.in_node
+            out_node = gene.link.out_node
 
-            if inode not in self.nodes or onode not in self.nodes:
+            if inode not in self.nodes or out_node not in self.nodes:
                 return False
 
         last_id = 0
@@ -436,14 +424,14 @@ class Genome:
         return True
 
     def mutate_random_trait(self):
-        traitnum = randint(0, len(self.traits) - 1)
-        self.traits[traitnum].mutate()
+        (t,) = sample(self.traits, 1)
+        t.mutate()
 
     def mutate_link_trait(self, times: int):
         gene_num: int
 
         for _ in range(times):
-            trait_num = randint(0, len(self.traits) - 1)
+            (t,) = sample(self.traits, 1)
 
             gene_num = randint(0, len(self.genes) - 1)
 
@@ -451,61 +439,54 @@ class Genome:
             the_gene += gene_num
 
             if not self.genes[the_gene].frozen:
-                self.genes[the_gene].lnk.link_trait = self.traits[trait_num]
+                self.genes[the_gene].link.link_trait = t
 
     def mutate_node_trait(self, times: int):
-        trait_num: int
         node_num: int
 
         for _ in range(times):
-            trait_num = randint(0, (len(self.traits)) - 1)
+            (t,) = sample(self.traits, 1)
 
             node_num = randint(0, len(self.nodes) - 1)
 
             the_node = 0
             the_node += node_num
 
-            if not (self.nodes[the_node].frozen):
-                self.nodes[the_node].node_trait = self.traits[trait_num]
+            if not self.nodes[the_node].frozen:
+                self.nodes[the_node].node_trait = t
 
     def mutate_link_weights(self, power: float, rate: float, mut_type: Mutator):
         severe = random() > 0.5
         num = 0.0
         gene_total = len(self.genes)
-        endpart = gene_total * 0.8
-        powermod = 1.0
+        end_part = gene_total * 0.8
+        power_mod = 1.0
 
         for gene in self.genes:
             if not gene.frozen:
                 if severe:
                     gauss_point = 0.3
-                    coldgauss_point = 0.1
-                elif gene_total >= 10 and num > endpart:
+                    cold_gaussian_point = 0.1
+                elif gene_total >= 10 and num > end_part:
                     gauss_point = 0.5
-                    coldgauss_point = 0.3
+                    cold_gaussian_point = 0.3
                 else:
                     gauss_point = 1.0 - rate
-                    if random() > 0.5:
-                        coldgauss_point = 1.0 - rate - 0.1
-                    else:
-                        coldgauss_point = 1.0 - rate
+                    cold_gaussian_point = 1.0 - rate - (0.1 if random() > 0.5 else 0)
 
-                rand_num = rand_pos_neg() * random() * power * powermod
+                rand_num = rand_pos_neg() * random() * power * power_mod
                 if mut_type == Mutator.GAUSSIAN:
                     rand_choice = random()
                     if rand_choice > gauss_point:
-                        gene.lnk.weight += rand_num
-                    elif rand_choice > coldgauss_point:
-                        gene.lnk.weight = rand_num
-                elif mut_type == Mutator.COLDGAUSSIAN:
-                    gene.lnk.weight = rand_num
+                        gene.link.weight += rand_num
+                    elif rand_choice > cold_gaussian_point:
+                        gene.link.weight = rand_num
+                elif mut_type == Mutator.COLD_GAUSSIAN:
+                    gene.link.weight = rand_num
 
-                if gene.lnk.weight > 8.0:
-                    gene.lnk.weight = 8.0
-                elif gene.lnk.weight < -8.0:
-                    gene.lnk.weight = -8.0
+                gene.link.weight = min(8, max(-8, gene.link.weight))
 
-                gene.mutation_num = gene.lnk.weight
+                gene.mutation_num = gene.link.weight
 
                 num += 1.0
 
@@ -521,8 +502,8 @@ class Genome:
             if self.genes[the_gene].enable:
                 check_gene = 0
                 while (self.genes[check_gene] != self.genes[-1]) and (
-                    self.genes[check_gene].lnk.in_node
-                    != self.genes[the_gene].lnk.in_node
+                    self.genes[check_gene].link.in_node
+                    != self.genes[the_gene].link.in_node
                     or not self.genes[check_gene].enable
                     or self.genes[check_gene].innovation_num
                     == self.genes[the_gene].innovation_num
@@ -544,52 +525,52 @@ class Genome:
             self.genes[gene].enable = True
 
     def mutate_add_node(
-        self, innovations: list[Innovation], curnode_id: int, cur_innovation: float
+        self, innovations: list[Innovation], node_id: int, cur_innovation: float
     ) -> bool:
-        genenum: int
-        in_node: NNode
-        out_node: NNode
+        gene_num: int
+        in_node: NNode | None
+        out_node: NNode | None
         the_link: Link
         done: bool = False
-        new_gene1: Gene
-        new_gene2: Gene
-        new_node: NNode
+        new_gene1: Gene | None = None
+        new_gene2: Gene | None = None
+        new_node: NNode | None = None
         trait_ptr: Trait | None
         old_weight: float
         found: bool
-        thegene: int = 0
-        trycount = 0
+        the_gene: int = 0
+        try_count = 0
         found = False
-        while trycount < 20 and not found:
-            genenum = randint(0, len(self.genes) - 1)
+        while try_count < 20 and not found:
+            gene_num = randint(0, len(self.genes) - 1)
 
-            thegene = genenum
-            if (
-                self.genes[thegene].enable
-                and self.genes[thegene].lnk.in_node.gen_node_label != NodePlace.BIAS
-            ):
+            the_gene = gene_num
+            gene = self.genes[the_gene]
+            assert gene.link.in_node is not None
+            if gene.enable and gene.link.in_node.gen_node_label != NodePlace.BIAS:
                 found = True
-            trycount += 1
+            try_count += 1
 
         if not found:
             return False
 
-        self.genes[thegene].enable = False
+        self.genes[the_gene].enable = False
 
-        the_link = self.genes[thegene].lnk
-        old_weight = self.genes[thegene].lnk.weight
+        the_link = self.genes[the_gene].link
+        old_weight = self.genes[the_gene].link.weight
 
         in_node = the_link.in_node
         out_node = the_link.out_node
 
         the_innovation = 0
-
         while not done:
+            assert in_node is not None
+            assert out_node is not None
             if the_innovation == len(innovations):
                 trait_ptr = the_link.link_trait
-                curnode_id += 1
+                node_id += 1
                 new_node = NNode.create_from_nodetype(
-                    NodeType.NEURON, curnode_id, NodePlace.HIDDEN
+                    NodeType.NEURON, node_id, NodePlace.HIDDEN
                 )
                 new_node.node_trait = self.traits[0]
 
@@ -613,6 +594,8 @@ class Genome:
                 )
                 cur_innovation += 2.0
 
+                assert in_node is not None
+                assert out_node is not None
                 innovations.append(
                     Innovation.create_innovation(
                         in_node.node_id,
@@ -620,29 +603,24 @@ class Genome:
                         cur_innovation - 2.0,
                         cur_innovation - 1.0,
                         new_node.node_id,
-                        self.genes[thegene].innovation_num,
+                        self.genes[the_gene].innovation_num,
                     )
                 )
 
                 done = True
 
             elif (
-                (
-                    (innovations[the_innovation]).innovation_type
-                    == InnovationType.NEW_NODE
-                )
-                and ((innovations[the_innovation]).node_in_id == (in_node.node_id))
-                and ((innovations[the_innovation]).node_out_id == (out_node.node_id))
-                and (
-                    (innovations[the_innovation]).old_innovation_num
-                    == self.genes[thegene].innovation_num
-                )
+                innovations[the_innovation].innovation_type == InnovationType.NEW_NODE
+                and innovations[the_innovation].node_in_id == in_node.node_id
+                and innovations[the_innovation].node_out_id == out_node.node_id
+                and innovations[the_innovation].old_innovation_num
+                == self.genes[the_gene].innovation_num
             ):
                 trait_ptr = the_link.link_trait
 
                 new_node = NNode.create_from_nodetype(
                     NodeType.NEURON,
-                    (innovations[the_innovation]).new_node_id,
+                    innovations[the_innovation].new_node_id,
                     NodePlace.HIDDEN,
                 )
                 new_node.node_trait = self.traits[0]
@@ -653,7 +631,7 @@ class Genome:
                     in_node,
                     new_node,
                     the_link.is_recurrent,
-                    (innovations[the_innovation]).innovation_num1,
+                    innovations[the_innovation].innovation_num1,
                     0,
                 )
                 new_gene2 = Gene.create_a_trait(
@@ -662,13 +640,17 @@ class Genome:
                     new_node,
                     out_node,
                     False,
-                    (innovations[the_innovation]).innovation_num2,
+                    innovations[the_innovation].innovation_num2,
                     0,
                 )
 
                 done = True
             else:
                 the_innovation += 1
+
+        assert new_gene1 is not None
+        assert new_gene2 is not None
+        assert new_node is not None
 
         self.add_gene(self.genes, new_gene1)
         self.add_gene(self.genes, new_gene2)
@@ -677,15 +659,15 @@ class Genome:
         return True
 
     def mutate_add_link(
-        self, innovs: list[Innovation], cur_innov: float, tries: int
+        self, innovations: list[Innovation], cur_innov: float, tries: int
     ) -> bool:
         node_num_1: int
         node_num_2: int
         try_count: int
-        no_dep1: NNode
-        no_dep2: NNode
+        no_dep1: NNode | None = None
+        no_dep2: NNode | None = None
         found = False
-        recur_flag: int
+        recur_flag: int | None = None
         new_gene: Gene | None = None
         trait_num: int
         new_weight: float
@@ -708,33 +690,30 @@ class Genome:
             while try_count < tries:
                 loop_recur = random() > 0.5
 
-                if loop_recur:
-                    node_num_1 = randint(first_non_sensor, len(self.nodes) - 1)
-                    node_num_2 = node_num_1
-                else:
-                    node_num_1 = randint(0, len(self.nodes) - 1)
-                    node_num_2 = randint(first_non_sensor, len(self.nodes) - 1)
+                node_num_2 = randint(first_non_sensor, len(self.nodes) - 1)
+                node_num_1 = (
+                    node_num_2 if loop_recur else randint(0, len(self.nodes) - 1)
+                )
 
                 the_node1 = node_num_1
-
                 the_node2 = node_num_2
 
                 no_dep1 = self.nodes[the_node1]
                 no_dep2 = self.nodes[the_node2]
 
-                thegene = 0
+                the_gene = 0
                 while (
-                    thegene != len(self.genes)
+                    the_gene != len(self.genes)
                     and no_dep2.type != NodeType.SENSOR
                     and not (
-                        self.genes[thegene].lnk.in_node == no_dep1
-                        and self.genes[thegene].lnk.out_node == no_dep2
-                        and self.genes[thegene].lnk.is_recurrent
+                        self.genes[the_gene].link.in_node == no_dep1
+                        and self.genes[the_gene].link.out_node == no_dep2
+                        and self.genes[the_gene].link.is_recurrent
                     )
                 ):
-                    thegene += 1
+                    the_gene += 1
 
-                if thegene != len(self.genes):
+                if the_gene != len(self.genes):
                     try_count += 1
                 else:
                     count = 0
@@ -759,25 +738,24 @@ class Genome:
                 node_num_2 = randint(first_non_sensor, len(self.nodes) - 1)
 
                 the_node1 = node_num_1
-
                 the_node2 = node_num_2
 
                 no_dep1 = self.nodes[the_node1]
                 no_dep2 = self.nodes[the_node2]
 
-                thegene = 0
+                the_gene = 0
                 while (
-                    thegene != len(self.genes)
+                    the_gene != len(self.genes)
                     and no_dep2.type != NodeType.SENSOR
                     and not (  # Don't allow SENSORS to get input
-                        self.genes[thegene].lnk.in_node == no_dep1
-                        and self.genes[thegene].lnk.out_node == no_dep2
-                        and not self.genes[thegene].lnk.is_recurrent
+                        self.genes[the_gene].link.in_node == no_dep1
+                        and self.genes[the_gene].link.out_node == no_dep2
+                        and not self.genes[the_gene].link.is_recurrent
                     )
                 ):
-                    thegene += 1
+                    the_gene += 1
 
-                if thegene != len(self.genes):
+                if the_gene != len(self.genes):
                     try_count += 1
                 else:
                     count = 0
@@ -803,12 +781,14 @@ class Genome:
         the_innov = 0
 
         if do_recur:
-            recur_flag = 1
+            recur_flag = True
 
         done = False
 
         while not done:
-            if the_innov == len(innovs):
+            assert no_dep1 is not None
+            assert no_dep2 is not None
+            if the_innov == len(innovations):
                 if self.phenotype == 0:
                     return False
 
@@ -816,6 +796,7 @@ class Genome:
 
                 new_weight = rand_pos_neg() * random() * 1.0
 
+                assert recur_flag is not None
                 new_gene = Gene.create_a_trait(
                     self.traits[trait_num],
                     new_weight,
@@ -825,8 +806,7 @@ class Genome:
                     cur_innov,
                     new_weight,
                 )
-
-                innovs.append(
+                innovations.append(
                     Innovation.create_link_innovation(
                         no_dep1.node_id,
                         no_dep2.node_id,
@@ -840,18 +820,19 @@ class Genome:
 
                 done = True
             elif (
-                innovs[the_innov].innovation_type == InnovationType.NEW_LINK
-                and innovs[the_innov].node_in_id == no_dep1.node_id
-                and innovs[the_innov].node_out_id == no_dep2.node_id
-                and innovs[the_innov].recur_flag == recur_flag
+                innovations[the_innov].innovation_type == InnovationType.NEW_LINK
+                and innovations[the_innov].node_in_id == no_dep1.node_id
+                and innovations[the_innov].node_out_id == no_dep2.node_id
+                and innovations[the_innov].recur_flag == recur_flag
             ):
+                assert recur_flag is not None
                 new_gene = Gene.create_a_trait(
-                    self.traits[innovs[the_innov].new_trait_number],
-                    innovs[the_innov].new_weight,
+                    self.traits[innovations[the_innov].new_trait_number],
+                    innovations[the_innov].new_weight,
                     no_dep1,
                     no_dep2,
                     recur_flag,
-                    innovs[the_innov].innovation_num1,
+                    innovations[the_innov].innovation_num1,
                     0,
                 )
 
@@ -863,7 +844,7 @@ class Genome:
 
         return True
 
-    def mutate_add_sensor(self, innovs: list[Innovation], curinnov: float):
+    def mutate_add_sensor(self, innovations: list[Innovation], current_innov: float):
         sensors: list[NNode] = []
         outputs: list[NNode] = []
         node: NNode
@@ -871,17 +852,17 @@ class Genome:
         output: NNode
         gene: Gene
 
-        newweight = 0.0
-        newgene: Gene | None = None
+        new_weight = 0.0
+        new_gene: Gene | None = None
 
         i: int
         found: bool
 
         done: bool
 
-        outputConnections: int
+        output_connections: int
 
-        traitnum: int
+        trait_num: int
 
         for i, node in enumerate(self.nodes):
             if node.type == NodeType.SENSOR:
@@ -890,14 +871,15 @@ class Genome:
                 outputs.append(node)
 
         for sensor in sensors:
-            outputConnections = 0
+            output_connections = 0
 
             for gene in self.genes:
-                if gene.lnk.out_node.gen_node_label == NodePlace.OUTPUT:
-                    outputConnections += 1
+                assert gene.link.out_node is not None
+                if gene.link.out_node.gen_node_label == NodePlace.OUTPUT:
+                    output_connections += 1
 
-            if outputConnections == len(outputs):
-                iter = sensors.remove(sensor)
+            if output_connections == len(outputs):
+                sensors.remove(sensor)
 
         if len(sensors) == 0:
             return
@@ -908,97 +890,98 @@ class Genome:
             output = outputs[i]
 
             found = False
-            for j, gene in enumerate(self.genes):
-                if gene.lnk.in_node == sensor and gene.lnk.out_node == output:
+            for gene in self.genes:
+                if gene.link.in_node == sensor and gene.link.out_node == output:
                     found = True
 
             if not found:
-                theinnov = 0
+                the_innov = 0
                 done = False
 
                 while not done:
-                    if theinnov == len(innovs):
-                        traitnum = randint(0, len(self.traits) - 1)
-                        thetrait = 0
+                    if the_innov == len(innovations):
+                        trait_num = randint(0, len(self.traits) - 1)
 
-                        newweight = rand_pos_neg() * random() * 3.0
+                        new_weight = rand_pos_neg() * random() * 3.0
 
-                        newgene = Gene.create_a_trait(
-                            self.traits[traitnum],
-                            newweight,
+                        new_gene = Gene.create_a_trait(
+                            self.traits[trait_num],
+                            new_weight,
                             sensor,
                             output,
                             False,
-                            curinnov,
-                            newweight,
+                            current_innov,
+                            new_weight,
                         )
 
-                        innovs.append(
+                        innovations.append(
                             Innovation.create_link_innovation(
                                 sensor.node_id,
                                 output.node_id,
-                                curinnov,
-                                newweight,
-                                traitnum,
+                                current_innov,
+                                new_weight,
+                                trait_num,
                             )
                         )
 
-                        curinnov = curinnov + 1.0
+                        current_innov = current_innov + 1.0
 
                         done = True
                     elif (
-                        ((innovs[theinnov]).innovation_type == InnovationType.NEW_LINK)
-                        and ((innovs[theinnov]).node_in_id == (sensor.node_id))
-                        and ((innovs[theinnov]).node_out_id == (output.node_id))
-                        and ((innovs[theinnov]).recur_flag == False)
+                        (
+                            (innovations[the_innov]).innovation_type
+                            == InnovationType.NEW_LINK
+                        )
+                        and ((innovations[the_innov]).node_in_id == (sensor.node_id))
+                        and ((innovations[the_innov]).node_out_id == (output.node_id))
+                        and ((innovations[the_innov]).recur_flag == False)
                     ):
-                        newgene = Gene.create_a_trait(
-                            self.traits[innovs[theinnov].new_trait_number],
-                            (innovs[theinnov]).new_weight,
+                        new_gene = Gene.create_a_trait(
+                            self.traits[innovations[the_innov].new_trait_number],
+                            (innovations[the_innov]).new_weight,
                             sensor,
                             output,
                             False,
-                            (innovs[theinnov]).innovation_num1,
+                            (innovations[the_innov]).innovation_num1,
                             0,
                         )
 
                         done = True
 
                     else:
-                        theinnov += 1
-                assert newgene is not None
-                self.add_gene(self.genes, newgene)
+                        the_innov += 1
+                assert new_gene is not None
+                self.add_gene(self.genes, new_gene)
 
     def mate_multipoint(
         self,
         g,
-        genomeid: int,
+        genome_id: int,
         fitness1: float,
         fitness2: float,
-        interspec_flag: bool,
     ):
         assert isinstance(g, Genome)
-        newtraits: list[Trait] = []
-        newnodes: list[NNode] = []
-        newgenes: list[Gene] = []
+        new_traits: list[Trait] = []
+        new_nodes: list[NNode] = []
+        new_genes: list[Gene] = []
         new_genome: Genome
 
-        newtrait: Trait
+        new_trait: Trait
 
         p1innov: float
         p2innov: float
-        chosengene: Gene
-        traitnum: int
-        inode: NNode
-        onode: NNode
+        chosen_gene: Gene | None = None
+        trait_num: int
+        inode: NNode | None = None
+        out_node: NNode | None = None
         new_inode: NNode
-        new_onode: NNode
-        nodetraitnum: int
+        new_out_node: NNode
+        node_trait_num: int
 
         disable: bool
 
         disable = False
-        newgene: Gene
+        new_gene: Gene
 
         p1better: bool
 
@@ -1006,8 +989,8 @@ class Genome:
 
         p2trait = 0
         for p1trait in self.traits:
-            newtrait = Trait.create_from_two(p1trait, g.traits[p2trait])
-            newtraits.append(newtrait)
+            new_trait = Trait.create_from_two(p1trait, g.traits[p2trait])
+            new_traits.append(new_trait)
             p2trait += 1
 
         if fitness1 > fitness2:
@@ -1017,35 +1000,32 @@ class Genome:
         else:
             p1better = False
 
-        for curnode in g.nodes:
+        for node in g.nodes:
             if (
-                curnode.gen_node_label == NodePlace.INPUT
-                or curnode.gen_node_label == NodePlace.BIAS
-                or curnode.gen_node_label == NodePlace.OUTPUT
+                node.gen_node_label == NodePlace.INPUT
+                or node.gen_node_label == NodePlace.BIAS
+                or node.gen_node_label == NodePlace.OUTPUT
             ):
-                if not curnode.node_trait:
-                    nodetraitnum = 0
-                else:
-                    nodetraitnum = curnode.node_trait.trait_id - self.traits[0].trait_id
+                node_trait_num = self._get_node_trait_num(node)
 
-                new_onode = NNode.create_from_nnode_and_trait(
-                    curnode, newtraits[nodetraitnum]
+                new_out_node = NNode.create_from_nnode_and_trait(
+                    node, new_traits[node_trait_num]
                 )
 
-                self.node_insert(newnodes, new_onode)
+                self.node_insert(new_nodes, new_out_node)
 
         p1gene = 0
         p2gene = 0
-        while not ((p1gene == len(self.genes)) and (p2gene == len(g.genes))):
+        while not (p1gene == len(self.genes) and p2gene == len(g.genes)):
             skip = False
 
             if p1gene == len(self.genes):
-                chosengene = g.genes[p2gene]
+                chosen_gene = g.genes[p2gene]
                 p2gene += 1
                 if p1better:
                     skip = True
             elif p2gene == len(g.genes):
-                chosengene = self.genes[p1gene]
+                chosen_gene = self.genes[p1gene]
                 p1gene += 1
                 if not p1better:
                     skip = True
@@ -1054,7 +1034,7 @@ class Genome:
                 p2innov = g.genes[p2gene].innovation_num
 
                 if p1innov == p2innov:
-                    chosengene = select_random(self.genes[p1gene], g.genes[p2gene])
+                    chosen_gene = select_random(self.genes[p1gene], g.genes[p2gene])
 
                     if (
                         not (self.genes[p1gene].enable and g.genes[p2gene].enable)
@@ -1065,209 +1045,163 @@ class Genome:
                     p1gene += 1
                     p2gene += 1
                 elif p1innov < p2innov:
-                    chosengene = self.genes[p1gene]
+                    chosen_gene = self.genes[p1gene]
                     p1gene += 1
 
                     if not p1better:
                         skip = True
                 elif p2innov < p1innov:
-                    chosengene = g.genes[p2gene]
+                    chosen_gene = g.genes[p2gene]
                     p2gene += 1
                     if p1better:
                         skip = True
 
-            curgene2 = 0
-            cgl = chosengene.lnk
-            cg2 = newgenes[curgene2].lnk
-            while (curgene2 != len(newgenes)) and not (
-                (
-                    cg2.in_node.node_id == cgl.in_node.node_id
-                    and cg2.out_node.node_id == cgl.out_node.node_id
-                    and cg2.is_recurrent == cgl.is_recurrent
-                )
-                or (
-                    cg2.in_node.node_id == cgl.out_node.node_id
-                    and (cg2.out_node.node_id == cgl.in_node.node_id)
-                    and not (cg2.is_recurrent or cgl.is_recurrent)
-                )
-            ):
-                curgene2 += 1
-                cg2 = newgenes[curgene2].lnk
+            gene2 = 0
+            assert chosen_gene is not None
+            cgl = chosen_gene.link
+            cg2 = new_genes[gene2].link
 
-            if curgene2 != len(newgenes):
+            assert cg2.in_node is not None
+            assert cg2.out_node is not None
+
+            assert cgl.in_node is not None
+            assert cgl.out_node is not None
+
+            while gene2 != len(new_genes) and not (
+                self.compare_same_nodes(cgl, cg2)
+                or self.compare_different_nodes(cgl, cg2)
+            ):
+                gene2 += 1
+                cg2 = new_genes[gene2].link
+
+                assert cg2.in_node is not None
+                assert cg2.out_node is not None
+
+            if gene2 != len(new_genes):
                 skip = True
 
             if not skip:
-                if chosengene.lnk.link_trait == 0:
-                    traitnum = self.traits[0].trait_id - 1
+                if chosen_gene.link.link_trait == 0:
+                    trait_num = self.traits[0].trait_id - 1
                 else:
-                    traitnum = (
-                        chosengene.lnk.link_trait.trait_id - self.traits[0].trait_id
+                    assert chosen_gene.link.link_trait is not None
+                    trait_num = (
+                        chosen_gene.link.link_trait.trait_id - self.traits[0].trait_id
                     )
 
-                inode = chosengene.lnk.in_node
-                onode = chosengene.lnk.out_node
-
-                if inode.node_id < onode.node_id:
-                    curnode = 0
-                    while (
-                        curnode != len(newnodes)
-                        and newnodes[curnode].node_id != inode.node_id
-                    ):
-                        curnode += 1
-
-                    if curnode == len(newnodes):
-                        if not (inode.node_trait):
-                            nodetraitnum = 0
-                        else:
-                            nodetraitnum = (
-                                inode.node_trait.trait_id - self.traits[0].trait_id
-                            )
-
-                        new_inode = NNode.create_from_nnode_and_trait(
-                            inode, newtraits[nodetraitnum]
-                        )
-                        self.node_insert(newnodes, new_inode)
-                    else:
-                        new_inode = newnodes[curnode]
-
-                    curnode = 0
-                    while (
-                        curnode != len(newnodes)
-                        and newnodes[curnode].node_id != onode.node_id
-                    ):
-                        curnode += 1
-                    if curnode == len(newnodes):
-                        if not (onode.node_trait):
-                            nodetraitnum = 0
-                        else:
-                            nodetraitnum = (
-                                onode.node_trait.trait_id - self.traits[0].trait_id
-                            )
-
-                        new_onode = NNode.create_from_nnode_and_trait(
-                            onode, newtraits[nodetraitnum]
-                        )
-
-                        self.node_insert(newnodes, new_onode)
-                    else:
-                        new_onode = newnodes[curnode]
+                inode = chosen_gene.link.in_node
+                out_node = chosen_gene.link.out_node
+                assert inode is not None
+                assert out_node is not None
+                if inode.node_id < out_node.node_id:
+                    new_inode = self.while_insert_new_nodes(
+                        new_traits, new_nodes, inode
+                    )
+                    new_out_node = self.while_insert_new_nodes(
+                        new_traits, new_nodes, out_node
+                    )
                 else:
-                    curnode = 0
-                    while (
-                        curnode != len(newnodes)
-                        and newnodes[curnode].node_id != onode.node_id
-                    ):
-                        curnode += 1
-                    if curnode == len(newnodes):
-                        if not (onode.node_trait):
-                            nodetraitnum = 0
-                        else:
-                            nodetraitnum = (
-                                onode.node_trait.trait_id - self.traits[0].trait_id
-                            )
+                    new_out_node = self.while_insert_new_nodes(
+                        new_traits, new_nodes, out_node
+                    )
+                    new_inode = self.while_insert_new_nodes(
+                        new_traits, new_nodes, inode
+                    )
 
-                        new_onode = NNode.create_from_nnode_and_trait(
-                            onode, newtraits[nodetraitnum]
-                        )
-                        self.node_insert(newnodes, new_onode)
-                    else:
-                        new_onode = newnodes[curnode]
-
-                    curnode = 0
-                    while (
-                        curnode != len(newnodes)
-                        and newnodes[curnode].node_id != inode.node_id
-                    ):
-                        curnode += 1
-                    if curnode == len(newnodes):
-                        if not inode.node_trait:
-                            nodetraitnum = 0
-                        else:
-                            nodetraitnum = (
-                                inode.node_trait.trait_id - self.traits[0].trait_id
-                            )
-
-                        new_inode = NNode.create_from_nnode_and_trait(
-                            inode, newtraits[nodetraitnum]
-                        )
-
-                        self.node_insert(newnodes, new_inode)
-                    else:
-                        new_inode = newnodes[curnode]
-
-                newgene = Gene.create_from_gene(
-                    chosengene, newtraits[traitnum], new_inode, new_onode
+                new_gene = Gene.create_from_gene(
+                    chosen_gene, new_traits[trait_num], new_inode, new_out_node
                 )
                 if disable:
-                    newgene.enable = False
+                    new_gene.enable = False
                     disable = False
-                newgenes.append(newgene)
+                new_genes.append(new_gene)
 
         new_genome = Genome.create_full_genome_specs(
-            genomeid, newtraits, newnodes, newgenes
+            genome_id, new_traits, new_nodes, new_genes
         )
 
         return new_genome
 
+    @staticmethod
+    def compare_different_nodes(cgl, cg2):
+        return (
+            cg2.in_node.node_id == cgl.out_node.node_id
+            and cg2.out_node.node_id == cgl.in_node.node_id
+            and not (cg2.is_recurrent or cgl.is_recurrent)
+        )
+
+    @staticmethod
+    def compare_same_nodes(cgl, cg2):
+        return (
+            cg2.in_node.node_id == cgl.in_node.node_id
+            and cg2.out_node.node_id == cgl.out_node.node_id
+            and cg2.is_recurrent == cgl.is_recurrent
+        )
+
+    def while_insert_new_nodes(self, new_traits, new_nodes, inode):
+        node = self._while_new_nodes(new_nodes, inode)
+        new_inode = self.insert_new_nodes(new_traits, new_nodes, inode, node)
+
+        return new_inode
+
+    def insert_new_nodes(self, new_traits, new_nodes, inode, node):
+        if node == len(new_nodes):
+            node_trait_num = self._get_node_trait_num(inode)
+            new_inode = NNode.create_from_nnode_and_trait(
+                inode, new_traits[node_trait_num]
+            )
+            self.node_insert(new_nodes, new_inode)
+        else:
+            new_inode = new_nodes[node]
+        return new_inode
+
     def mate_multipoint_avg(
         self,
         g,
-        genomeid: int,
+        genome_id: int,
         fitness1: float,
         fitness2: float,
-        interspec_flag: bool,
     ):
         assert isinstance(g, Genome)
-        newtraits: list[Trait] = []
-        newnodes: list[NNode] = []
-        newgenes: list[Gene] = []
-
-        newtrait: Trait
-
+        new_traits: list[Trait] = []
+        new_nodes: list[NNode] = []
+        new_genes: list[Gene] = []
+        new_trait: Trait
         p1innov: float
         p2innov: float
-        chosengene: Gene
-        traitnum: int
+        chosen_gene: Gene | None = None
+        trait_num: int
         inode: NNode
-        onode: NNode
+        out_node: NNode
         new_inode: NNode
-        new_onode: NNode
-
-        nodetraitnum: int
-
-        avgene: Gene
-
-        newgene: Gene
-
+        new_out_node: NNode
+        node_trait_num: int
+        avg_gene: Gene
+        new_gene: Gene
         skip: bool
-
         p1better: bool
 
         p2trait = 0
         for p1trait in self.traits:
-            newtrait = Trait.create_from_two(p1trait, g.traits[p2trait])
-            newtraits.append(newtrait)
+            new_trait = Trait.create_from_two(p1trait, g.traits[p2trait])
+            new_traits.append(new_trait)
             p2trait += 1
 
-        avgene = Gene.create_a_trait(None, 0, 0, 0, 0, 0, 0)
+        avg_gene = Gene.create_a_trait(None, 0, None, None, False, 0, 0)
 
-        for curnode in g.nodes:
+        for node in g.nodes:
             if (
-                curnode.gen_node_label == NodePlace.INPUT
-                or curnode.gen_node_label == NodePlace.OUTPUT
-                or curnode.gen_node_label == NodePlace.BIAS
+                node.gen_node_label == NodePlace.INPUT
+                or node.gen_node_label == NodePlace.OUTPUT
+                or node.gen_node_label == NodePlace.BIAS
             ):
-                if not curnode.node_trait:
-                    nodetraitnum = 0
-                else:
-                    nodetraitnum = curnode.node_trait.trait_id - self.traits[0].trait_id
+                node_trait_num = self._get_node_trait_num(node)
 
-                new_onode = NNode.create_from_nnode_and_trait(
-                    curnode, newtraits[nodetraitnum]
+                new_out_node = NNode.create_from_nnode_and_trait(
+                    node, new_traits[node_trait_num]
                 )
 
-                self.node_insert(newnodes, new_onode)
+                self.node_insert(new_nodes, new_out_node)
 
         if fitness1 > fitness2:
             p1better = True
@@ -1279,18 +1213,18 @@ class Genome:
         p1gene = 0
         p2gene = 0
         while not (p1gene == len(self.genes) and p2gene == len(g.genes)):
-            avgene.enable = True
+            avg_gene.enable = True
 
             skip = False
 
             if p1gene == len(self.genes):
-                chosengene = g.genes[p2gene]
+                chosen_gene = g.genes[p2gene]
                 p2gene += 1
 
                 if p1better:
                     skip = True
             elif p2gene == len(g.genes):
-                chosengene = self.genes[p1gene]
+                chosen_gene = self.genes[p1gene]
                 p1gene += 1
 
                 if not p1better:
@@ -1300,9 +1234,9 @@ class Genome:
                 p2innov = g.genes[p2gene].innovation_num
 
                 if p1innov == p2innov:
-                    av = avgene.lnk
-                    p1 = self.genes[p1gene].lnk
-                    p2 = self.genes[p2gene].lnk
+                    av = avg_gene.link
+                    p1 = self.genes[p1gene].link
+                    p2 = self.genes[p2gene].link
                     av.link_trait = select_random(p1, p2).link_trait
 
                     av.weight = p1.weight + p2.weight / 2.0
@@ -1311,35 +1245,40 @@ class Genome:
                     av.out_node = select_random(p1, p2).out_node
                     av.is_recurrent = select_random(p1, p2).is_recurrent
 
-                    avgene.innovation_num = self.genes[p1gene].innovation_num
-                    avgene.mutation_num = (
+                    avg_gene.innovation_num = self.genes[p1gene].innovation_num
+                    avg_gene.mutation_num = (
                         self.genes[p1gene].mutation_num + g.genes[p2gene].mutation_num
                     ) / 2.0
 
                     if not (self.genes[p1gene].enable and g.genes[p2gene].enable):
                         if random() < 0.75:
-                            avgene.enable = False
+                            avg_gene.enable = False
 
-                    chosengene = avgene
+                    chosen_gene = avg_gene
                     p1gene += 1
                     p2gene += 1
                 elif p1innov < p2innov:
-                    chosengene = self.genes[p1gene]
+                    chosen_gene = self.genes[p1gene]
                     p1gene += 1
 
                     if not p1better:
                         skip = True
                 elif p2innov < p1innov:
-                    chosengene = g.genes[p2gene]
+                    chosen_gene = g.genes[p2gene]
                     p2gene += 1
 
                     if p1better:
                         skip = True
 
-            curgene2 = 0
-            cg = chosengene.lnk
-            while curgene2 != len(newgenes):
-                cg2 = newgenes[curgene2].lnk
+            gene2 = 0
+            assert chosen_gene is not None
+            cg = chosen_gene.link
+            assert cg.in_node is not None
+            assert cg.out_node is not None
+            while gene2 != len(new_genes):
+                cg2 = new_genes[gene2].link
+                assert cg2.in_node is not None
+                assert cg2.out_node is not None
                 if (
                     cg2.in_node.node_id == cg.in_node.node_id
                     and cg2.out_node.node_id == cg.out_node.node_id
@@ -1350,154 +1289,129 @@ class Genome:
                     and not (cg2.is_recurrent or cg.is_recurrent)
                 ):
                     skip = True
-                curgene2 += 1
+                gene2 += 1
 
             if not skip:
-                if cg.link_trait is None:
-                    traitnum = self.traits[0].trait_id - 1
-                else:
-                    traitnum = cg.link_trait.trait_id - self.traits[0].trait_id
-
+                trait_num = self._get_trait_num(cg)
                 inode = cg.in_node
-                onode = cg.out_node
+                out_node = cg.out_node
 
-                if inode.node_id < onode.node_id:
-                    curnode = 0
-                    while (
-                        curnode != len(newnodes)
-                        and newnodes[curnode].node_id != inode.node_id
-                    ):
-                        curnode += 1
+                if inode.node_id < out_node.node_id:
+                    node = self._while_new_nodes(new_nodes, inode)
 
-                    if curnode == len(newnodes):
-                        if not inode.node_trait:
-                            nodetraitnum = 0
-                        else:
-                            nodetraitnum = (
-                                inode.node_trait.trait_id - self.traits[0].trait_id
-                            )
-
+                    if node == len(new_nodes):
+                        node_trait_num = self._get_node_trait_num(inode)
                         new_inode = NNode.create_from_nnode_and_trait(
-                            inode, newtraits[nodetraitnum]
+                            inode, new_traits[node_trait_num]
                         )
 
-                        self.node_insert(newnodes, new_inode)
+                        self.node_insert(new_nodes, new_inode)
                     else:
-                        new_inode = newnodes[curnode]
+                        new_inode = new_nodes[node]
 
-                    curnode = 0
-                    while (
-                        curnode != len(newnodes)
-                        and newnodes[curnode].node_id != onode.node_id
-                    ):
-                        curnode += 1
-                    if curnode == len(newnodes):
-                        if not onode.node_trait:
-                            nodetraitnum = 0
-                        else:
-                            nodetraitnum = (
-                                onode.node_trait.trait_id - self.traits[0].trait_id
-                            )
-                        new_onode = NNode.create_from_nnode_and_trait(
-                            onode, newtraits[nodetraitnum]
+                    node = self._while_new_nodes(new_nodes, out_node)
+                    if node == len(new_nodes):
+                        node_trait_num = self._get_node_trait_num(out_node)
+                        new_out_node = NNode.create_from_nnode_and_trait(
+                            out_node, new_traits[node_trait_num]
                         )
 
-                        self.node_insert(newnodes, new_onode)
+                        self.node_insert(new_nodes, new_out_node)
                     else:
-                        new_onode = newnodes[curnode]
+                        new_out_node = new_nodes[node]
                 else:
-                    curnode = 0
-                    while (
-                        curnode != len(newnodes)
-                        and newnodes[curnode].node_id != onode.node_id
-                    ):
-                        curnode += 1
-                    if curnode == len(newnodes):
-                        if not onode.node_trait:
-                            nodetraitnum = 0
-                        else:
-                            nodetraitnum = (
-                                onode.node_trait.trait_id - self.traits[0].trait_id
-                            )
-
-                        new_onode = NNode.create_from_nnode_and_trait(
-                            onode, newtraits[nodetraitnum]
+                    node = self._while_new_nodes(new_nodes, out_node)
+                    if node == len(new_nodes):
+                        node_trait_num = self._get_node_trait_num(out_node)
+                        new_out_node = NNode.create_from_nnode_and_trait(
+                            out_node, new_traits[node_trait_num]
                         )
 
-                        self.node_insert(newnodes, new_onode)
+                        self.node_insert(new_nodes, new_out_node)
                     else:
-                        new_onode = newnodes[curnode]
+                        new_out_node = new_nodes[node]
 
-                    curnode = 0
-                    while (
-                        curnode != len(newnodes)
-                        and newnodes[curnode].node_id != inode.node_id
-                    ):
-                        curnode += 1
-                    if curnode == len(newnodes):
-                        if not inode.node_trait:
-                            nodetraitnum = 0
-                        else:
-                            nodetraitnum = (
-                                inode.node_trait.trait_id - self.traits[0].trait_id
-                            )
+                    node = self._while_new_nodes(new_nodes, inode)
+                    if node == len(new_nodes):
+                        node_trait_num = self._get_node_trait_num(inode)
 
                         new_inode = NNode.create_from_nnode_and_trait(
-                            inode, newtraits[nodetraitnum]
+                            inode, new_traits[node_trait_num]
                         )
 
-                        self.node_insert(newnodes, new_inode)
+                        self.node_insert(new_nodes, new_inode)
                     else:
-                        new_inode = newnodes[curnode]
+                        new_inode = new_nodes[node]
 
-                newgene = Gene.create_from_gene(
-                    chosengene, newtraits[traitnum], new_inode, new_onode
+                new_gene = Gene.create_from_gene(
+                    chosen_gene, new_traits[trait_num], new_inode, new_out_node
                 )
 
-                newgenes.append(newgene)
+                new_genes.append(new_gene)
 
-        del avgene
+        del avg_gene
 
-        return Genome.create_full_genome_specs(genomeid, newtraits, newnodes, newgenes)
+        return Genome.create_full_genome_specs(
+            genome_id, new_traits, new_nodes, new_genes
+        )
 
-    def mate_singlepoint(self, g, genomeid: int):
+    @staticmethod
+    def _while_new_nodes(nodes, node):
+        counter = 0
+        while counter != len(nodes) and nodes[counter].node_id != node.node_id:
+            counter += 1
+        return counter
+
+    def _get_trait_num(self, cg):
+        if cg.link_trait is None:
+            trait_num = self.traits[0].trait_id - 1
+        else:
+            trait_num = cg.link_trait.trait_id - self.traits[0].trait_id
+        return trait_num
+
+    def _get_node_trait_num(self, node):
+        if not node.node_trait:
+            node_trait_num = 0
+        else:
+            node_trait_num = node.node_trait.trait_id - self.traits[0].trait_id
+        return node_trait_num
+
+    def mate_singlepoint(self, g, genome_id: int):
         assert isinstance(g, Genome)
-        newtraits: list[Trait] = []
-        newnodes: list[NNode] = []
-        newgenes: list[Gene] = []
+        new_traits: list[Trait] = []
+        new_nodes: list[NNode] = []
+        new_genes: list[Gene] = []
 
-        newtrait: Trait
+        new_trait: Trait
 
         p1innov: float  # Innovation numbers for genes inside parents' Genomes
         p2innov: float
-        chosengene: Gene  # Gene chosen for baby to inherit
-        traitnum: int  # Number of trait new gene points to
+        chosen_gene: Gene | None = None  # Gene chosen for baby to inherit
+        trait_num: int  # Number of trait new gene points to
         inode: NNode  # NNodes connected to the chosen Gene
-        onode: NNode
+        out_node: NNode
         new_inode: NNode
-        new_onode: NNode
-        nodetraitnum: int  # Trait number for a NNode
+        new_out_node: NNode
 
-        avgene: Gene
+        avg_gene: Gene
 
-        crosspoint: int  # The point in the Genome to cross at
-        genecounter: int  # Counts up to the crosspoint
+        cross_point: int  # The point in the Genome to cross at
+        gene_counter: int  # Counts up to the cross_point
         skip: bool  # Used for skipping unwanted genes
 
         p2trait = 0
         for p1trait in self.traits:
-            newtrait = Trait.create_from_two(
-                p1trait, g.traits[p2trait]
-            )  # Construct by averaging
-            newtraits.append(newtrait)
+            # Construct by averaging
+            new_trait = Trait.create_from_two(p1trait, g.traits[p2trait])
+            new_traits.append(new_trait)
             p2trait += 1
 
-        avgene = Gene.create_a_trait(None, 0, 0, 0, 0, 0, 0)
+        avg_gene = Gene.create_a_trait(None, 0, None, None, False, 0, 0)
 
         if len(self.genes) < len(g.genes):
             s = self.genes
             o = g.genes
-            crosspoint = randint(0, len(self.genes) - 1)
+            cross_point = randint(0, len(self.genes) - 1)
             p1gene = 0
             p2gene = 0
             stopper = len(g.genes)
@@ -1506,207 +1420,130 @@ class Genome:
         else:
             s = g.genes
             o = self.genes
-            crosspoint = randint(0, len(g.genes) - 1)
+            cross_point = randint(0, len(g.genes) - 1)
             p2gene = 0
             p1gene = 0
             stopper = len(self.genes)
             p1stop = len(g.genes)
             p2stop = len(self.genes)
 
-        genecounter = 0  # Ready to count to crosspoint
+        gene_counter = 0  # Ready to count to cross_point
 
         skip = False  # Default to not skip a Gene
 
         while p2gene != stopper:
-            avgene.enable = True  # Default to True
+            avg_gene.enable = True  # Default to True
 
             if p1gene == p1stop:
-                chosengene = o[p2gene]
+                chosen_gene = o[p2gene]
                 p2gene += 1
             elif p2gene == p2stop:
-                chosengene = s[p1gene]
+                chosen_gene = s[p1gene]
                 p1gene += 1
             else:
                 p1innov = s[p1gene].innovation_num
                 p2innov = o[p2gene].innovation_num
 
                 if p1innov == p2innov:
-                    if genecounter < crosspoint:
-                        chosengene = s[p1gene]
-                    elif genecounter > crosspoint:
-                        chosengene = o[p2gene]
+                    if gene_counter < cross_point:
+                        chosen_gene = s[p1gene]
+                    elif gene_counter > cross_point:
+                        chosen_gene = o[p2gene]
                     else:
-                        avgene.lnk.link_trait = select_random(
+                        avg_gene.link.link_trait = select_random(
                             s[p1gene], o[p2gene]
-                        ).lnk.link_trait
+                        ).link.link_trait
 
-                        avgene.lnk.weight = (
-                            s[p1gene].lnk.weight + o[p2gene].lnk.weight
+                        avg_gene.link.weight = (
+                            s[p1gene].link.weight + o[p2gene].link.weight
                         ) / 2.0
 
-                        avgene.lnk.in_node = select_random(
+                        avg_gene.link.in_node = select_random(
                             s[p1gene], o[p2gene]
-                        ).lnk.in_node
-                        avgene.lnk.out_node = select_random(
+                        ).link.in_node
+                        avg_gene.link.out_node = select_random(
                             s[p1gene], o[p2gene]
-                        ).lnk.out_node
-                        avgene.lnk.is_recurrent = select_random(
+                        ).link.out_node
+                        avg_gene.link.is_recurrent = select_random(
                             s[p1gene], o[p2gene]
-                        ).lnk.is_recurrent
+                        ).link.is_recurrent
 
-                        avgene.innovation_num = s[p1gene].innovation_num
-                        avgene.mutation_num = (
+                        avg_gene.innovation_num = s[p1gene].innovation_num
+                        avg_gene.mutation_num = (
                             s[p1gene].mutation_num + o[p2gene].mutation_num
                         ) / 2.0
 
                         if not (s[p1gene].enable and o[p2gene].enable):
-                            avgene.enable = False
+                            avg_gene.enable = False
 
-                        chosengene = avgene
+                        chosen_gene = avg_gene
 
                     p1gene += 1
                     p2gene += 1
-                    genecounter += 1
+                    gene_counter += 1
                 elif p1innov < p2innov:
-                    if genecounter < crosspoint:
-                        chosengene = s[p1gene]
+                    if gene_counter < cross_point:
+                        chosen_gene = s[p1gene]
                         p1gene += 1
-                        genecounter += 1
+                        gene_counter += 1
                     else:
-                        chosengene = o[p2gene]
+                        chosen_gene = o[p2gene]
                         p2gene += 1
                 elif p2innov < p1innov:
                     p2gene += 1
                     skip = True  # Special case: we need to skip to the next iteration
 
-            curgene2 = 0
+            gene2 = 0
 
-            ng2 = newgenes[curgene2].lnk
-            cg = chosengene.lnk
-            while curgene2 != len(newgenes) and not (
-                (
-                    ng2.in_node.node_id == cg.in_node.node_id
-                    and ng2.out_node.node_id == cg.out_node.node_id
-                    and ng2.is_recurrent == cg.is_recurrent
-                )
-                or (
-                    ng2.in_node.node_id == cg.out_node.node_id
-                    and ng2.out_node.node_id == cg.in_node.node_id
-                    and not (ng2.is_recurrent or cg.is_recurrent)
-                )
+            ng2 = new_genes[gene2].link
+            assert chosen_gene is not None
+            cg = chosen_gene.link
+            assert ng2.in_node is not None
+            assert ng2.out_node is not None
+            assert cg.in_node is not None
+            assert cg.out_node is not None
+            while gene2 != len(new_genes) and not (
+                Genome.compare_same_nodes(ng2, cg)
+                or Genome.compare_different_nodes(ng2, cg)
             ):
-                curgene2 += 1
+                gene2 += 1
 
-            if curgene2 != len(newgenes):
+            if gene2 != len(new_genes):
                 skip = True  # Link is a duplicate
 
             if not skip:
-                if cg.link_trait is None:
-                    traitnum = self.traits[0].trait_id - 1
-                else:
-                    traitnum = (
-                        cg.link_trait.trait_id - self.traits[0].trait_id
-                    )  # The subtracted number normalizes depending on whether traits start counting at 1 or 0
+                trait_num = self._get_trait_num(cg)
 
                 inode = cg.in_node
-                onode = cg.out_node
+                out_node = cg.out_node
 
-                if inode.node_id < onode.node_id:
-                    curnode = 0
-                    while (
-                        curnode != len(newnodes)
-                        and newnodes[curnode].node_id != inode.node_id
-                    ):
-                        curnode += 1
-
-                    if curnode == len(newnodes):
-                        if not inode.node_trait:
-                            nodetraitnum = 0
-                        else:
-                            nodetraitnum = ((inode.node_trait).trait_id) - (
-                                (self.traits[0]).trait_id
-                            )
-
-                        new_inode = NNode.create_from_nnode_and_trait(
-                            inode, newtraits[nodetraitnum]
-                        )
-                        self.node_insert(newnodes, new_inode)
-                    else:
-                        new_inode = newnodes[curnode]
-
-                    curnode = 0
-                    while curnode != len(newnodes) and (
-                        newnodes[curnode].node_id != onode.node_id
-                    ):
-                        curnode += 1
-                    if curnode == len(newnodes):
-                        if not (onode.node_trait):
-                            nodetraitnum = 0
-                        else:
-                            nodetraitnum = ((onode.node_trait).trait_id) - (
-                                self.traits[0]
-                            ).trait_id
-
-                        new_onode = NNode.create_from_nnode_and_trait(
-                            onode, newtraits[nodetraitnum]
-                        )
-                        self.node_insert(newnodes, new_onode)
-                    else:
-                        new_onode = newnodes[curnode]
+                if inode.node_id < out_node.node_id:
+                    new_inode = self.while_insert_new_nodes(
+                        new_traits, new_nodes, inode
+                    )
+                    new_out_node = self.while_insert_new_nodes(
+                        new_traits, new_nodes, out_node
+                    )
                 else:
-                    curnode = 0
-                    while (
-                        curnode != len(newnodes)
-                        and newnodes[curnode].node_id != onode.node_id
-                    ):
-                        curnode += 1
-                    if curnode == len(newnodes):
-                        if not onode.node_trait:
-                            nodetraitnum = 0
-                        else:
-                            nodetraitnum = ((onode.node_trait).trait_id) - (
-                                self.traits[0]
-                            ).trait_id
-
-                        new_onode = NNode.create_from_nnode_and_trait(
-                            onode, newtraits[nodetraitnum]
-                        )
-                        self.node_insert(newnodes, new_onode)
-                    else:
-                        new_onode = newnodes[curnode]
-
-                    curnode = 0
-
-                    while (
-                        curnode != len(newnodes)
-                        and newnodes[curnode].node_id != inode.node_id
-                    ):
-                        curnode += 1
-                    if curnode == len(newnodes):
-                        if not (inode.node_trait):
-                            nodetraitnum = 0
-                        else:
-                            nodetraitnum = ((inode.node_trait).trait_id) - (
-                                self.traits[0]
-                            ).trait_id
-
-                        new_inode = NNode.create_from_nnode_and_trait(
-                            inode, newtraits[nodetraitnum]
-                        )
-                        self.node_insert(newnodes, new_inode)
-                    else:
-                        new_inode = newnodes[curnode]
+                    new_out_node = self.while_insert_new_nodes(
+                        new_traits, new_nodes, out_node
+                    )
+                    new_inode = self.while_insert_new_nodes(
+                        new_traits, new_nodes, inode
+                    )
 
                 new_gene = Gene.create_from_gene(
-                    chosengene, newtraits[traitnum], new_inode, new_onode
+                    chosen_gene, new_traits[trait_num], new_inode, new_out_node
                 )
-                newgenes.append(new_gene)
+                new_genes.append(new_gene)
 
             skip = False
 
-        del avgene  # Clean up used object
+        del avg_gene  # Clean up used object
 
-        return Genome.create_full_genome_specs(genomeid, newtraits, newnodes, newgenes)
+        return Genome.create_full_genome_specs(
+            genome_id, new_traits, new_nodes, new_genes
+        )
 
     def compatibility(self, g) -> float:
         assert isinstance(g, Genome)
@@ -1753,64 +1590,68 @@ class Genome:
                     num_disjoint += 1.0
 
         return (
-            disjoint_coeff * (num_disjoint / 1.0)
-            + excess_coeff * (num_excess / 1.0)
-            + mutdiff_coeff * (mut_diff_total / num_matching)
+            disjoint_coefficient * (num_disjoint / 1.0)
+            + excess_coefficient * (num_excess / 1.0)
+            + mutation_diff_coefficient * (mut_diff_total / num_matching)
         )
 
     def trait_compare(self, t1: Trait, t2: Trait) -> float:
         id1 = t1.trait_id
         id2 = t2.trait_id
-        params_diff = 0.0
 
         if id1 == 1 and id2 >= 2 or id2 == 1 and id1 >= 2:
             return 0.5
         if id1 < 2:
             return 0.0
 
+        params_diff = 0.0
         for count in range(3):
             params_diff += abs(t1.params[count] - t2.params[count])
         return params_diff / 4.0
 
     def extrons(self) -> int:
-        return len([curgene for curgene in self.genes if curgene.enable])
+        return len([g for g in self.genes if g.enable])
 
     def randomize_traits(self):
-        numtraits = len(self.traits)
-        traitnum: int
+        num_traits = len(self.traits)
+        trait_num: int
 
-        for curnode in self.nodes:
-            traitnum = randint(1, numtraits)
-            curnode.trait_id = traitnum
+        for node in self.nodes:
+            trait_num = randint(1, num_traits)
+            node.trait_id = trait_num
 
-            curtrait = 0
-            while (self.traits[curtrait].trait_id) != traitnum:
-                curtrait += 1
-            curnode.node_trait = self.traits[curtrait]
+            trait = self._find_new_trait_num(trait_num)
+            node.node_trait = self.traits[trait]
 
-        for curgene in self.genes:
-            traitnum = randint(1, numtraits)
-            curgene.lnk.trait_id = traitnum
+        for gene in self.genes:
+            trait_num = randint(1, num_traits)
+            gene.link.trait_id = trait_num
 
-            curtrait = 0
-            while self.traits[curtrait].trait_id != traitnum:
-                curtrait += 1
-            curgene.lnk.link_trait = self.traits[curtrait]
+            trait = self._find_new_trait_num(trait_num)
+            gene.link.link_trait = self.traits[trait]
 
-    def node_insert(self, nlist: list[NNode], n: NNode):
-        id = n.node_id
+    def _find_new_trait_num(self, trait_num):
+        trait = 0
+        while self.traits[trait].trait_id != trait_num:
+            trait += 1
+        return trait
 
-        curnode = 0
-        while nlist[curnode] != nlist[-1] and (nlist[curnode].node_id < id):
-            curnode += 1
+    def node_insert(self, n_list: list[NNode], n: NNode):
+        n_id = n.node_id
+        node = 0
+        while n_list[node] != n_list[-1] and (n_list[node].node_id < n_id):
+            node += 1
 
-        nlist.insert(curnode, n)
+        n_list.insert(node, n)
 
-    def add_gene(self, glist: list[Gene], g: Gene):
-        inum = g.innovation_num
+    def add_gene(self, gene_list: list[Gene], g: Gene):
+        innovation_num = g.innovation_num
 
-        curgene = 0
-        while glist[curgene] != glist[-1] and (glist[curgene].innovation_num < inum):
-            curgene += 1
+        gene = 0
+        while (
+            gene_list[gene] != gene_list[-1]
+            and gene_list[gene].innovation_num < innovation_num
+        ):
+            gene += 1
 
-        glist.insert(curgene, g)
+        gene_list.insert(gene, g)

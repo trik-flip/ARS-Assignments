@@ -43,6 +43,22 @@ def draw_beacon(screen, robby: Robot, p: Position):
 
 
 running = True
+
+
+def draw_intersection(RED, screen, p):
+    if p is None:
+        return
+
+    assert isinstance(p, tuple)
+    bp1, bp2 = p
+
+    assert isinstance(bp1, Position)
+    assert isinstance(bp2, Position)
+
+    pygame.draw.circle(screen, RED, bp1.xy, 5, 1)
+    pygame.draw.circle(screen, RED, bp2.xy, 5, 1)
+
+
 while running:
     screen.fill(WHITE)
     ev = pygame.event.get()
@@ -79,7 +95,7 @@ while running:
     if key_event[pygame.K_ESCAPE]:
         running = False
 
-    robby.update()
+    robby.update([b1,b2,b3])
 
     robby.draw(screen)
 
@@ -89,27 +105,19 @@ while running:
     r2 = b2.d(rpp)
     r3 = b3.d(rpp)
 
-    bp = b1.triangulate(r1, b2, r2, b3, r3)
+    # bp = b1.triangulate(r1, b2, r2, b3, r3)
+    bp = robby.pose.position.triangulate_with_beacons(b1, b2, b3)
     if bp is not None:
         pygame.draw.circle(screen, LIGHT_BLUE, bp.xy, 10, 2)
 
-    p = b1.intersection_of_circles(r1, b2, r2)
-    if p is not None:
-        bp1, bp2 = p
-        pygame.draw.circle(screen, RED, bp1.xy, 5, 1)
-        pygame.draw.circle(screen, RED, bp2.xy, 5, 1)
+    p = robby.pose.position.intersection_of_beacon(b1, b2)
+    draw_intersection(RED, screen, p)
 
-    p = b1.intersection_of_circles(r1, b3, r3)
-    if p is not None:
-        bp1, bp2 = p
-        pygame.draw.circle(screen, RED, bp1.xy, 5, 1)
-        pygame.draw.circle(screen, RED, bp2.xy, 5, 1)
+    p = robby.pose.position.intersection_of_beacon(b1, b3)
+    draw_intersection(RED, screen, p)
 
-    p = b2.intersection_of_circles(r2, b3, r3)
-    if p is not None:
-        bp1, bp2 = p
-        pygame.draw.circle(screen, RED, bp1.xy, 5, 1)
-        pygame.draw.circle(screen, RED, bp2.xy, 5, 1)
+    p = robby.pose.position.intersection_of_beacon(b2, b3)
+    draw_intersection(RED, screen, p)
 
     draw_beacon(screen, robby, b1)
     draw_beacon(screen, robby, b2)

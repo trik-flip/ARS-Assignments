@@ -1,12 +1,13 @@
 from random import random
+
 from genome import Genome
 from innovation import Innovation
+from mutator import Mutator
 from organism import Organism
 from species import Species
-from genome import Mutator
 
 babies_stolen = 8
-dropoff_age = 6
+drop_off_age = 6
 pop_size = 20
 compat_threshold = 0.8
 
@@ -18,7 +19,7 @@ class Population:
 
         for i in range(size):
             new_genome = g.duplicate(i + 1)
-            new_genome.mutate_link_weights(1.0, 1.0, Mutator.COLDGAUSSIAN)
+            new_genome.mutate_link_weights(1.0, 1.0, Mutator.COLD_GAUSSIAN)
             new_genome.randomize_traits()
             new_organism = Organism(0.0, new_genome, 1)
             self.organisms.append(new_organism)
@@ -100,7 +101,7 @@ class Population:
 
         overall_average: float
 
-        orgcount: int
+        org_count: int
 
         skim: float
         total_exp: int
@@ -118,8 +119,6 @@ class Population:
         stolen_babies: int
 
         half_pop: int
-
-        best_species_num: int
 
         for s in self.species:
             ss.append(s)
@@ -166,8 +165,6 @@ class Population:
 
         ss.sort(key=lambda x: x.organisms[0].original_fitness)
 
-        best_species_num = ss[0].id
-
         species = ss[0]
         species.organisms[0].pop_champ = True
         if species.organisms[0].original_fitness > self.highest_fitness:
@@ -176,7 +173,7 @@ class Population:
         else:
             self.highest_last_changed += 1
 
-        if self.highest_last_changed >= dropoff_age + 5:
+        if self.highest_last_changed >= drop_off_age + 5:
             self.highest_last_changed = 0
 
             half_pop = pop_size // 2
@@ -222,7 +219,7 @@ class Population:
             one_fifth_stolen = babies_stolen // 5
             one_tenth_stolen = babies_stolen // 10
 
-            while species != len(ss) - 1 and ss[species].last_improved() > dropoff_age:
+            while species != len(ss) - 1 and ss[species].last_improved() > drop_off_age:
                 species += 1
 
             if stolen_babies >= one_fifth_stolen and ss[species] != ss[-1]:
@@ -232,7 +229,7 @@ class Population:
 
                 species += 1
 
-            while species != len(ss) - 1 and ss[species].last_improved() > dropoff_age:
+            while species != len(ss) - 1 and ss[species].last_improved() > drop_off_age:
                 species += 1
 
             if ss[species] != ss[-1] and stolen_babies >= one_fifth_stolen:
@@ -241,7 +238,7 @@ class Population:
                 stolen_babies -= one_fifth_stolen
                 species += 1
 
-            while ss[species] != ss[-1] and ss[species].last_improved() > dropoff_age:
+            while ss[species] != ss[-1] and ss[species].last_improved() > drop_off_age:
                 species += 1
 
             if ss[species] != ss[-1] and stolen_babies >= one_tenth_stolen:
@@ -251,7 +248,7 @@ class Population:
 
                 species += 1
 
-            while ss[species] != ss[-1] and ss[species].last_improved() > dropoff_age:
+            while ss[species] != ss[-1] and ss[species].last_improved() > drop_off_age:
                 species += 1
 
             while stolen_babies > 0 and ss[species] != ss[-1]:
@@ -268,7 +265,7 @@ class Population:
                 species += 1
 
                 while (
-                    ss[species] != ss[-1] and ss[species].last_improved() > dropoff_age
+                    ss[species] != ss[-1] and ss[species].last_improved() > drop_off_age
                 ):
                     species += 1
 
@@ -280,10 +277,12 @@ class Population:
 
         org = 0
         while org != len(self.organisms):
-            if self.organisms[org].eliminate:
-                self.organisms[org].species.remove_org(self.organisms[org])
+            orgs_org = self.organisms[org]
+            if orgs_org.eliminate:
+                assert orgs_org.species is not None
+                orgs_org.species.remove_org(orgs_org)
 
-                del self.organisms[org]
+                del orgs_org
 
                 dead_org = org
 
@@ -295,11 +294,11 @@ class Population:
         while self.species[species] != self.species[-1]:
             self.species[species].reproduce(generation, self, ss)
 
-            curspecies2 = 0
-            while self.species[curspecies2] != self.species[-1]:
-                if self.species[curspecies2].id == last_id:
-                    species = curspecies2
-                curspecies2 += 1
+            species2 = 0
+            while self.species[species2] != self.species[-1]:
+                if self.species[species2].id == last_id:
+                    species = species2
+                species2 += 1
 
             species += 1
 
@@ -308,9 +307,11 @@ class Population:
 
         org = 0
         while self.organisms[org] != self.organisms[-1]:
-            self.organisms[org].species.remove_org(self.organisms[org])
+            orgs_org = self.organisms[org]
+            assert orgs_org.species is not None
+            orgs_org.species.remove_org(orgs_org)
 
-            del self.organisms[org]
+            del orgs_org
 
             dead_org = org
             org += 1
@@ -318,15 +319,15 @@ class Population:
             self.organisms.remove(self.organisms[dead_org])
 
         species = 0
-        orgcount = 0
+        org_count = 0
         while self.species[species] != self.species[-1]:
             if len(self.species[species].organisms) == 0:
                 del self.species[species]
 
-                deadspecies = species
+                dead_species = species
                 species += 1
 
-                self.species.remove(self.species[deadspecies])
+                self.species.remove(self.species[dead_species])
             else:
                 if self.species[species].novel:
                     self.species[species].novel = False
@@ -334,19 +335,19 @@ class Population:
                     self.species[species].age += 1
 
                 for org in self.species[species].organisms:
-                    org.gnome.genome_id = orgcount
-                    orgcount += 1
+                    org.gnome.genome_id = org_count
+                    org_count += 1
                     self.organisms.append(org)
                 species += 1
 
-        curinnov = 0
-        while self.innovations[curinnov] != self.innovations[-1]:
-            del self.innovations[curinnov]
+        current_innov = 0
+        while self.innovations[current_innov] != self.innovations[-1]:
+            del self.innovations[current_innov]
 
-            deadinnov = curinnov
-            curinnov += 1
+            dead_innov = current_innov
+            current_innov += 1
 
-            self.innovations.remove(self.innovations[deadinnov])
+            self.innovations.remove(self.innovations[dead_innov])
 
         return True
 

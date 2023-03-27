@@ -1,9 +1,10 @@
 from math import fmod
 from random import randint, random
-from typing import Self
-from organism import Organism
-from genome import Genome, Mutator
+
+from genome import Genome
+from mutator import Mutator
 from network import Network
+from organism import Organism
 from population import Population, compat_threshold
 
 dropoff_age = 8
@@ -110,19 +111,19 @@ class Species:
         e_o_fracpart: float
         skim_intpart: float
 
-        expected_offspring = 0
+        self.expected_offspring = 0
 
         for curorg in self.organisms:
             e_o_intpart = int(curorg.expected_offspring)
             e_o_fracpart = fmod(curorg.expected_offspring, 1.0)
 
-            expected_offspring += e_o_intpart
+            self.expected_offspring += e_o_intpart
 
             skim += e_o_fracpart
 
             if skim > 1.0:
                 skim_intpart = int(skim)
-                expected_offspring += int(skim_intpart)
+                self.expected_offspring += int(skim_intpart)
                 skim -= skim_intpart
 
         return skim
@@ -156,7 +157,7 @@ class Species:
         assert champ is not None
         return champ
 
-    def reproduce(self, generation: int, pop: Population, sorted_species: list[Self]):
+    def reproduce(self, generation: int, pop: Population, sorted_species: list):
         count: int
         pool_size: int
         org_num: int
@@ -296,7 +297,6 @@ class Species:
                         count,
                         mom.original_fitness,
                         dad.original_fitness,
-                        outside,
                     )
                 elif random() < (
                     mate_multipoint_avg_prob
@@ -307,7 +307,6 @@ class Species:
                         count,
                         mom.original_fitness,
                         dad.original_fitness,
-                        outside,
                     )
                 else:
                     new_genome = mom.gnome.mate_singlepoint(dad.gnome, count)

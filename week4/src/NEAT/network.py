@@ -1,11 +1,11 @@
-from nnode import NNode, NodeType, FuncType
 from genome import Genome
 from neat import fsigmoid, hebbian
+from nnode import FuncType, NNode, NodeType
 
 
 class Network:
-    numnodes: int
-    numlinks: int
+    num_nodes: int
+    num_links: int
     all_nodes: list[NNode]
     input_iter: int
     genotype: Genome
@@ -17,8 +17,8 @@ class Network:
     adaptable: bool
 
     def __init__(self) -> None:
-        self.numnodes = -1
-        self.numlinks = -1
+        self.num_nodes = -1
+        self.num_links = -1
         self.name = None
 
     @staticmethod
@@ -175,7 +175,7 @@ class Network:
                 seen_list.append(n)
                 self.node_count_helper((n), counter, seen_list)
 
-        self.numnodes = counter
+        self.num_nodes = counter
 
         return counter
 
@@ -184,20 +184,20 @@ class Network:
         if node.type != NodeType.SENSOR:
             for l in in_nodes:
                 assert l.in_node is not None
-                location = seenlist.index(l.in_node)
+                location: int = seenlist.index(l.in_node)
                 if location == len(seenlist) - 1:
                     counter += 1
                     seenlist.append(l.in_node)
                     self.node_count_helper(l.in_node, counter, seenlist)
 
-    def linkcount(self):
+    def link_count(self):
         counter = 0
         seenlist = []
 
         for n in self.outputs:
             self.link_count_helper(n, counter, seenlist)
 
-        self.numlinks = counter
+        self.num_links = counter
 
         return counter
 
@@ -213,10 +213,10 @@ class Network:
                 assert l.in_node is not None
                 self.link_count_helper(l.in_node, counter, seenlist)
 
-    def destroy_helper(self, curnode: NNode, seenlist: list[NNode]):
-        in_nodes = curnode.incoming
+    def destroy_helper(self, node: NNode, seenlist: list[NNode]):
+        in_nodes = node.incoming
 
-        if curnode.type != NodeType.SENSOR:
+        if node.type != NodeType.SENSOR:
             for l in in_nodes:
                 assert l is not None
                 location = seenlist.index(l)

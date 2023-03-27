@@ -1,27 +1,16 @@
-from enum import Enum
-
-
-class InnovationType(Enum):
-    NEW_NODE = 0
-    NEW_LINK = 1
+from innovation_type import InnovationType
 
 
 class Innovation:
     innovation_type: InnovationType
-
     node_in_id: int
     node_out_id: int
-
     innovation_num1: float
     innovation_num2: float
-
     new_weight: float
     new_trait_number: int
-
     new_node_id: int
-
     old_innovation_num: float
-
     recur_flag: bool
 
     @staticmethod
