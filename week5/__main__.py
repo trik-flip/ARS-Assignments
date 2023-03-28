@@ -16,6 +16,9 @@ beacons = [
     Position(400, 400),
     Position(500, 450),
     Position(500, 350),
+    Position(1500, 450),
+    Position(1500, 350),
+
 ]
 
 pygame.init()

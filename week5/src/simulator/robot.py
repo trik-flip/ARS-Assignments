@@ -163,10 +163,10 @@ class Robot:
             [np.linalg.norm(major_axis), np.linalg.norm(minor_axis)]
         )
         print(ellipse_radius)
-        ellipse_color = (155, 155, 0)
-        ellipse_thickness = 2
+        ellipse_color = (100, 205, 25)
+        ellipse_thickness = 1
         self.ellipse_history.append(
-            [ellipse_center, ellipse_radius * 50, ellipse_thickness]
+            [ellipse_center-(ellipse_radius*25), ellipse_radius * 50, ellipse_thickness]
         )
         for i in self.ellipse_history[::15]:
             pygame.draw.ellipse(screen, ellipse_color, (*i[0], *i[1]), i[2])
