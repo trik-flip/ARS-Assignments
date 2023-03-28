@@ -40,6 +40,7 @@ class Robot:
         self.color = color
         self.history = []
         self.prob_history = []
+        self.ellipse_history = []
         self.setup()
 
     def setup(self):
@@ -71,9 +72,10 @@ class Robot:
     R: np.ndarray
     Q: np.ndarray
 
-    @property
-    def z(self):
-        return self.C.dot(self.mu) + np.array([random(), random(), random()])
+    def z(self, pred):
+        return self.C.dot(pred) + np.array(
+            [random(scale=0.05), random(scale=0.05), random(scale=0.05)]
+        )
 
     @property
     def u(self):
@@ -102,9 +104,8 @@ class Robot:
             np.linalg.inv(self.C.dot(self.sigma_pred).dot(self.C.T) + self.Q)
         )
 
-    @property
-    def update_mu(self):
-        return self.k_correction.dot(self.z - self.C.dot(self.mu_pred))
+    def update_mu(self, pred):
+        return self.k_correction.dot(self.z(pred) - self.C.dot(self.mu_pred))
 
     def update_sigma(self):
         return (np.identity(3) - self.k_correction.dot(self.C)).dot(self.sigma_pred)
@@ -122,9 +123,9 @@ class Robot:
         for b1, b2 in itertools.combinations(beacons, 2):
             pos_p = self.pose.calc_position_with_bearing(b1, b2)
             if pos_p is not None:
-                self.mu = pos_p.array
+                pos_p  # = z
+                self.mu += self.update_mu(pos_p.array)
                 self.__sigma = self.update_sigma()
-                pass
                 # TODO: the correction step
                 # draw_robot(screen, 30, pos_p.position, pos_p._direction, (0, 200, 0))
                 break
@@ -148,6 +149,27 @@ class Robot:
             self.size,
             (255, 0, 0),
         )
+        self.draw_sigma(screen)
+
+    def draw_sigma(self, screen):
+        eigenvalues, eigenvectors = np.linalg.eig(self.__sigma)
+        std_devs = np.sqrt(np.diag(self.__sigma))
+        major_axis = 2 * std_devs[0] * eigenvectors[:, np.argmax(eigenvalues)]
+        minor_axis = 2 * std_devs[1] * eigenvectors[:, np.argmin(eigenvalues)]
+        print(major_axis, minor_axis)
+        angle = np.arctan2(major_axis[1], major_axis[0])
+        ellipse_center = self.mu[:2]
+        ellipse_radius = np.array(
+            [np.linalg.norm(major_axis), np.linalg.norm(minor_axis)]
+        )
+        print(ellipse_radius)
+        ellipse_color = (155, 155, 0)
+        ellipse_thickness = 2
+        self.ellipse_history.append(
+            [ellipse_center, ellipse_radius * 50, ellipse_thickness]
+        )
+        for i in self.ellipse_history[::15]:
+            pygame.draw.ellipse(screen, ellipse_color, (*i[0], *i[1]), i[2])
 
 
 def draw_pose(
@@ -184,3 +206,11 @@ def draw_robot_circle(
         position.xy,
         looking_line.xy,
     )
+
+
+def draw_ellipse_angle(screen, color, rect, angle, width=0):
+    target_rect = pygame.Rect(rect)
+    shape_surf = pygame.Surface(target_rect.size, pygame.SRCALPHA)
+    pygame.draw.ellipse(shape_surf, color, (0, 0, *target_rect.size), width)
+    rotated_surf = pygame.transform.rotate(shape_surf, angle)
+    screen.blit(rotated_surf, rotated_surf.get_rect(center=target_rect.center))
