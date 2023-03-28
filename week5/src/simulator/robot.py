@@ -50,12 +50,12 @@ class Robot:
         self.R = (
             np.array(
                 [
-                    [random(loc=1), 0, 0],
-                    [0, random(loc=1), 0],
-                    [0, 0, random(loc=1)],
+                    [random(loc=1, scale=0.9), 0.0, 0.0],
+                    [0.0, random(loc=1, scale=0.9), 0.0],
+                    [0.0, 0.0, random(loc=1, scale=0.9)],
                 ]
             )
-            * 1e-5
+            * 1e-3
         )  # Pose prediction error
         self.Q = (
             np.array(
@@ -65,7 +65,7 @@ class Robot:
                     [0.0, 0.0, 1.0],
                 ]
             )
-            * 1e-10
+            * 1e-5
         )  # Pose prediction error
         self.__sigma = np.identity(3)  #
 
@@ -92,7 +92,11 @@ class Robot:
 
     def z(self, pred):
         return self.C.dot(pred) + np.array(
-            [random(scale=0.05), random(scale=0.05), random(scale=0.05)]
+            [
+                random(loc=0.051, scale=0.05),
+                random(loc=0.051, scale=0.05),
+                random(loc=0.051, scale=0.05),
+            ]
         )
 
     @property
@@ -136,16 +140,14 @@ class Robot:
         self.mu = self.mu_pred
         self.__sigma = self.sigma_pred
 
+        # Correction
         # NOTE: Maybe check first if there are at least 2 beacons
         # When a localization is done we can break and add the correction step
         for b1, b2 in itertools.combinations(beacons, 2):
             pos_p = self.pose.calc_position_with_bearing(b1, b2)
             if pos_p is not None:
-                pos_p  # = z
                 self.mu += self.update_mu(pos_p.array)
                 self.__sigma = self.update_sigma()
-                # TODO: the correction step
-                # draw_robot(screen, 30, pos_p.position, pos_p._direction, (0, 200, 0))
                 break
         self.steering_angle = 0
 
@@ -194,23 +196,31 @@ class Robot:
             ]
         )
 
-        target_rect = pygame.Rect((*ellipse_center, *ellipse_radius))
-        size_we_want = tuple(map(lambda x: max(x, 1), target_rect.size))
-        shape_surf = pygame.Surface(size_we_want, pygame.SRCALPHA)
-        shape_surf.fill((0, 0, 0))
-        print(ellipse_radius)
-        if np.isnan(ellipse_radius.max()):
-            return
-        pygame.draw.ellipse(
-            shape_surf,
-            color,
-            (*ellipse_center, *size_we_want),
-            1,
-        )
-        rotated_surf = pygame.transform.rotate(shape_surf, angle)
-        screen.blit(rotated_surf, rotated_surf.get_rect(center=target_rect.center))
-        for i in self.ellipse_history[::15]:
+        # return self.draw_on_screen(screen, self.ellipse_history, color)
+        for i in self.ellipse_history[::300]:
             pygame.draw.ellipse(screen, color, (*i[0], *i[1]), i[2])
+
+    def draw_on_screen(self, screen, h, color):
+        for ellipse_center, ellipse_radius, _, angle in h[::50]:
+            target_rect = pygame.Rect(
+                (
+                    *ellipse_center,
+                    *ellipse_radius,
+                )
+            )
+            size_we_want = tuple(map(lambda x: max(x, 1), target_rect.size))
+            shape_surf = pygame.Surface(size_we_want, pygame.SRCALPHA)
+            # shape_surf.fill((0, 0, 0))
+            if np.isnan(ellipse_radius.max()):
+                return
+            pygame.draw.ellipse(
+                shape_surf,
+                color,
+                (0, 0, *size_we_want),
+                2,
+            )
+            rotated_surf = pygame.transform.rotate(shape_surf, angle * 360)
+            screen.blit(rotated_surf, rotated_surf.get_rect(center=target_rect.center))
 
 
 def draw_pose(
