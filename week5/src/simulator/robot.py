@@ -47,8 +47,26 @@ class Robot:
         self.steering_angle = 0
 
         self.C = np.identity(3)  # state to observation mapping
-        self.R = np.identity(3) * 1e-5  # Pose prediction error
-        self.Q = np.identity(3) * 1e-5  # ... prediction error
+        self.R = (
+            np.array(
+                [
+                    [random(loc=1), 0, 0],
+                    [0, random(loc=1), 0],
+                    [0, 0, random(loc=1)],
+                ]
+            )
+            * 1e-5
+        )  # Pose prediction error
+        self.Q = (
+            np.array(
+                [
+                    [1.0, 0.0, 0.0],
+                    [0.0, 1.0, 0.0],
+                    [0.0, 0.0, 1.0],
+                ]
+            )
+            * 1e-10
+        )  # Pose prediction error
         self.__sigma = np.identity(3)  #
 
     speed: float
@@ -154,22 +172,45 @@ class Robot:
     def draw_sigma(self, screen):
         eigenvalues, eigenvectors = np.linalg.eig(self.__sigma)
         std_devs = np.sqrt(np.diag(self.__sigma))
+
         major_axis = 2 * std_devs[0] * eigenvectors[:, np.argmax(eigenvalues)]
         minor_axis = 2 * std_devs[1] * eigenvectors[:, np.argmin(eigenvalues)]
-        print(major_axis, minor_axis)
         angle = np.arctan2(major_axis[1], major_axis[0])
-        ellipse_center = self.mu[:2]
+
+        color = (0, 205, 25)
+
+        scaler = 50
         ellipse_radius = np.array(
             [np.linalg.norm(major_axis), np.linalg.norm(minor_axis)]
         )
-        print(ellipse_radius)
-        ellipse_color = (100, 205, 25)
+        ellipse_center = self.mu[:2]
         ellipse_thickness = 1
         self.ellipse_history.append(
-            [ellipse_center-(ellipse_radius*25), ellipse_radius * 50, ellipse_thickness]
+            [
+                ellipse_center - (scaler * ellipse_radius / 2),
+                ellipse_radius * scaler,
+                ellipse_thickness,
+                angle,
+            ]
         )
+
+        target_rect = pygame.Rect((*ellipse_center, *ellipse_radius))
+        size_we_want = tuple(map(lambda x: max(x, 1), target_rect.size))
+        shape_surf = pygame.Surface(size_we_want, pygame.SRCALPHA)
+        shape_surf.fill((0, 0, 0))
+        print(ellipse_radius)
+        if np.isnan(ellipse_radius.max()):
+            return
+        pygame.draw.ellipse(
+            shape_surf,
+            color,
+            (*ellipse_center, *size_we_want),
+            1,
+        )
+        rotated_surf = pygame.transform.rotate(shape_surf, angle)
+        screen.blit(rotated_surf, rotated_surf.get_rect(center=target_rect.center))
         for i in self.ellipse_history[::15]:
-            pygame.draw.ellipse(screen, ellipse_color, (*i[0], *i[1]), i[2])
+            pygame.draw.ellipse(screen, color, (*i[0], *i[1]), i[2])
 
 
 def draw_pose(
